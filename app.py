@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v5.6 (전체 성적서 범위(G열) 유의미한 소수점만 표현되도록 전역 로직 패치)
+버전: v5.5 (온도기록계 다채널/괄호, 압력 소수점 포맷 및 숨김 행/0값 처리 완벽 패치)
 """
 
 import io
@@ -405,7 +405,7 @@ def format_number(val, decimals):
         return str(val).replace(",", "")
 
 def format_meaningful_decimals(val):
-    """숫자(표준값/범위)에서 무의미한 소수점(.00)을 제거하여 유의미한 값만 반환"""
+    """표준값(범위)에서 무의미한 소수점(.00)을 제거하여 유의미한 값만 반환"""
     if val is None or str(val).strip() in ("", "-"):
         return "-"
     try:
@@ -429,6 +429,7 @@ def get_formatted_value(cell):
         fmt = str(cell.number_format)
         if '.' in fmt:
             dec_part = fmt.split('.')[1].split(';')[0]
+            # 0, #, ? 문자의 개수를 세어 소수점 자릿수로 사용
             decimals = sum(1 for ch in dec_part if ch in '0#?')
             val_str = f"{val:.{decimals}f}"
         elif fmt != 'General' and float(val).is_integer():
@@ -1435,7 +1436,7 @@ elif should_run:
                                 pass
 
                             try:
-                                nom_val = float(std_val) if std_val is not None else ind_val
+                                nom_val = round(float(std_val)) if std_val is not None and isinstance(std_val, (int, float)) else ind_val
                                 if nom_val is None or float(nom_val) == 0: 
                                     continue
                             except (ValueError, TypeError):
@@ -1553,13 +1554,11 @@ elif should_run:
                         break
 
                     if not del_nominal:
-                        val_nom = pt["nom"]
-                        if isinstance(val_nom, str) and re.search(r'[a-zA-Z가-힣]', val_nom):
-                            # 이미 단위가 붙어 있는 문자열(예: 압력계 "30 MPa")은 그대로 출력
-                            ws_curr.cell(row=target_r, column=7, value=val_nom)
+                        if isinstance(pt["nom"], str):
+                            ws_curr.cell(row=target_r, column=7, value=pt["nom"])
                         else:
-                            # 그 외 모든 성적서의 범위 값에 유의미한 소수점 포맷 일괄 적용
-                            ws_curr.cell(row=target_r, column=7, value=format_meaningful_decimals(val_nom))
+                            nom_str = format_number(pt["nom"], res_dec)
+                            ws_curr.cell(row=target_r, column=7, value=nom_str)
 
                     if not del_data:
                         if isinstance(pt["ind"], str):
