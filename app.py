@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3 (업로드 박스 UI 최적화 / 오름차순 자동 정렬 추가 / 양식 선택 메뉴 가시성 개선)
+버전: v6.3.1 (맞춤 설정 UI 최적화 / 기본값 변경 및 레이아웃 재배치)
 """
 
 import io
@@ -340,6 +340,9 @@ st.markdown(
     }
 
     /* 양식 선택 라디오 버튼 모던 스타일링 */
+    div[data-testid="stRadio"] {
+        margin-bottom: -0.6rem !important;
+    }
     div[data-testid="stRadio"] > div {
         gap: 0.4rem !important;
         margin-top: 0 !important;
@@ -646,11 +649,10 @@ with col_right:
             st.markdown('<div class="opt-icon-box" style="color: #2563EB;">📋</div>', unsafe_allow_html=True)
         with c_lbl_t:
             st.markdown(
-                '<div class="opt-main-lbl" style="margin-top: 10px;">기록지 양식 선택</div>',
+                '<div class="opt-main-lbl" style="margin-top: 0.4rem;">기록지 양식 선택</div>',
                 unsafe_allow_html=True,
             )
         with c_opt_t:
-            st.markdown('<div style="margin-top: 2px;"></div>', unsafe_allow_html=True)
             slot_type = st.radio(
                 "기록지 양식 선택",
                 options=["10칸", "12칸"],
@@ -661,19 +663,6 @@ with col_right:
 
         MAX_SLOTS_PER_PAGE = 12 if "12" in slot_type else 10
         TEMPLATE_FILE = "12칸 기록지.xlsx" if MAX_SLOTS_PER_PAGE == 12 else "10칸 기록지.xlsx"
-
-        st.markdown('<div class="opt-divider"></div>', unsafe_allow_html=True)
-
-        c_ico0, c_lbl0, c_sw0 = st.columns([0.7, 3.3, 1.1])
-        with c_ico0:
-            st.markdown('<div class="opt-icon-box" style="color: #4F46E5;">⚡</div>', unsafe_allow_html=True)
-        with c_lbl0:
-            st.markdown(
-                '<div class="opt-main-lbl">자동 작업 모드</div><div class="opt-sub-lbl">파일 업로드 시 즉시 자동 변환</div>',
-                unsafe_allow_html=True,
-            )
-        with c_sw0:
-            auto_mode = st.toggle("auto_mode", value=True, label_visibility="collapsed")
 
         st.markdown('<div class="opt-divider"></div>', unsafe_allow_html=True)
 
@@ -714,11 +703,24 @@ with col_right:
         with c_sw3:
             del_data = st.toggle("del_dat", value=False, label_visibility="collapsed")
 
+        st.markdown('<div class="opt-divider"></div>', unsafe_allow_html=True)
+
+        c_ico0, c_lbl0, c_sw0 = st.columns([0.7, 3.3, 1.1])
+        with c_ico0:
+            st.markdown('<div class="opt-icon-box" style="color: #4F46E5;">⚡</div>', unsafe_allow_html=True)
+        with c_lbl0:
+            st.markdown(
+                '<div class="opt-main-lbl">자동 작업 모드</div><div class="opt-sub-lbl">파일 업로드 시 즉시 자동 변환</div>',
+                unsafe_allow_html=True,
+            )
+        with c_sw0:
+            auto_mode = st.toggle("auto_mode", value=False, label_visibility="collapsed")
+
         st.markdown(
             """
             <div class="info-callout">
                 <span>💡</span>
-                <span>특정 항목을 현장에서 수기로 직접 기입해야 할 때 해당 비우기 옵션을 켜면 빈칸으로 깔끔하게 생성됩니다.</span>
+                <span>현장에서 수기로 직접 기입해야 할 때 해당 비우기 옵션을 사용하세요.</span>
             </div>
             """,
             unsafe_allow_html=True,
