@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3 (업로드 박스 UI 최적화 / 오름차순 자동 정렬 추가 / 양식 선택 메뉴 가시성 개선)
+버전: v6.4 (업로드 박스 커스텀 3열 레이아웃 / 파일 확장자·용량 숨김 / 정렬 및 1열 메뉴 최적화)
 """
 
 import io
@@ -182,7 +182,7 @@ st.markdown(
     }
 
     /* ----------------------------------------------------
-       파일 업로더 드롭존 & 3열 리스트 커스텀 (핵심 업데이트)
+       파일 업로더 기본 스타일 오버라이드
        ---------------------------------------------------- */
     div[data-testid="stFileUploader"] {
         width: 100% !important;
@@ -192,12 +192,6 @@ st.markdown(
     div[data-testid="stFileUploader"] > label {
         display: none !important;
     }
-    
-    /* 파일 하나라도 첨부시 드롭존 숨기기 (CSS4 :has 속성 활용) */
-    div[data-testid="stFileUploader"]:has(ul[data-testid="stUploadedFileList"]) section {
-        display: none !important;
-    }
-
     div[data-testid="stFileUploader"] section {
         position: relative !important;
         padding: 2.8rem 1.4rem 1.6rem 1.4rem !important;
@@ -229,78 +223,40 @@ st.markdown(
         font-weight: 700 !important;
     }
 
-    /* 3열 그리드 레이아웃 설정 */
+    /* 네이티브 업로드 파일 목록 완전 숨김 (커스텀 UI로 대체) */
     ul[data-testid="stUploadedFileList"] {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 0.6rem !important;
-        padding: 0.5rem 0 !important;
-        counter-reset: file-counter;
-    }
-    
-    li[data-testid="stUploadedFile"] {
-        width: 100% !important;
-        background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 10px !important;
-        padding: 0.4rem 0.5rem !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
-        position: relative;
-        counter-increment: file-counter;
-    }
-    
-    /* 1~X 넘버링 배지 설정 */
-    li[data-testid="stUploadedFile"]::before {
-        content: counter(file-counter);
-        position: absolute;
-        left: -6px;
-        top: -6px;
-        background: #10B981;
-        color: #FFFFFF;
-        font-size: 0.65rem;
-        font-weight: 900;
-        width: 1.3rem;
-        height: 1.3rem;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-    }
-    
-    /* 엑셀 초록색 아이콘화 및 파일명 포맷팅 */
-    div[data-testid="stUploadedFile"] svg {
-        color: #10B981 !important;
-        width: 1.5rem !important;
-        height: 1.5rem !important;
-        margin-right: 0.3rem !important;
-    }
-    
-    /* 용량 텍스트 숨기기 */
-    div[data-testid="stUploadedFile"] small {
         display: none !important;
     }
-    
-    /* 파일명 길이 제어 (확장자 가리기 효과 적용) */
-    div[data-testid="stUploadedFile"] .stMarkdown {
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-        max-width: 85% !important;
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
+
+    /* ----------------------------------------------------
+       커스텀 3열 업로드 박스 UI 스타일
+       ---------------------------------------------------- */
+    div.st-key-custom_grid div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.4rem 0.5rem !important;
+        border-radius: 10px !important;
+        background: #FFFFFF !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+        border: 1px solid #E2E8F0 !important;
+        margin-bottom: 0.4rem !important;
     }
-    
-    /* X 삭제 아이콘 50% 확대 */
-    button[data-testid="stUploadedFileDelete"] {
-        transform: scale(1.5) !important;
-        margin-right: 0.2rem !important;
-        color: #EF4444 !important;
+    div.st-key-custom_grid button {
         background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        color: #EF4444 !important;
+        margin-top: 2px !important;
     }
-    button[data-testid="stUploadedFileDelete"]:hover {
+    div.st-key-custom_grid button p {
+        font-size: 1.3rem !important; /* X 버튼 50% 확대 */
+        font-weight: 900 !important;
+        margin: 0 !important;
+    }
+    div.st-key-custom_grid button:hover {
         color: #DC2626 !important;
+        background: transparent !important;
+        transform: scale(1.15);
     }
 
     /* 옵션 아이템 행 스타일 */
@@ -347,10 +303,10 @@ st.markdown(
     div[data-testid="stRadio"] label {
         background: #F8FAFC;
         border: 1px solid #E2E8F0;
-        padding: 0.4rem 0.8rem !important;
+        padding: 0.45rem 1.1rem !important;
         border-radius: 10px;
         font-weight: 700 !important;
-        font-size: 0.86rem !important;
+        font-size: 0.9rem !important;
         transition: all 0.15s ease;
     }
     div[data-testid="stRadio"] label:hover {
@@ -378,7 +334,7 @@ st.markdown(
         border: 1px solid #CBD5E1 !important;
         background: #FFFFFF !important;
         color: #475569 !important;
-        font-size: 0.9rem !important;
+        font-size: 0.92rem !important;
         font-weight: 700 !important;
         border-radius: 12px !important;
         transition: all 0.2s ease !important;
@@ -387,6 +343,21 @@ st.markdown(
         color: #DC2626 !important;
         background: #FEF2F2 !important;
         border-color: #FCA5A5 !important;
+    }
+    
+    div.action-btn-sort button {
+        height: 50px !important;
+        border: 1px solid #CBD5E1 !important;
+        background: #FFFFFF !important;
+        color: #0F172A !important;
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        transition: all 0.2s ease !important;
+    }
+    div.action-btn-sort button:hover {
+        border-color: #94A3B8 !important;
+        background: #F8FAFC !important;
     }
 
     div.action-btn-run button {
@@ -427,7 +398,7 @@ st.markdown(
 )
 
 # ==============================================================================
-# [백엔드 유틸리티 및 정밀 포맷팅 함수]
+# [백엔드 유틸리티 및 변수 초기화]
 # ==============================================================================
 
 if "uploader_key" not in st.session_state:
@@ -436,9 +407,10 @@ if "uploader_key" not in st.session_state:
 if "sort_enabled" not in st.session_state:
     st.session_state["sort_enabled"] = False
 
-# 신규 기록지 양식(1슬롯 = 6행, 가운데 3~4번째 행 병합)에 맞춘 포인트별 행 오프셋
-PT_ROW_OFFSETS = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]
+if "deleted_files" not in st.session_state:
+    st.session_state["deleted_files"] = []
 
+PT_ROW_OFFSETS = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]
 
 def clean_text(v):
     if v is None:
@@ -448,7 +420,6 @@ def clean_text(v):
     if s.startswith("="):
         return ""
     return s
-
 
 def get_decimal_places(val):
     if val is None or str(val).strip() in ("", "-"):
@@ -467,7 +438,6 @@ def get_decimal_places(val):
         pass
     return 0
 
-
 def format_number(val, decimals):
     if val is None or val == "" or val == "-":
         return "-"
@@ -479,7 +449,6 @@ def format_number(val, decimals):
     except Exception:
         return str(val).replace(",", "").strip()
 
-
 def format_meaningful_decimals(val):
     if val is None or str(val).strip() in ("", "-"):
         return "-"
@@ -490,7 +459,6 @@ def format_meaningful_decimals(val):
         return f"{f_val:.6f}".rstrip("0").rstrip(".")
     except Exception:
         return clean_text(val)
-
 
 def get_formatted_value(cell):
     if cell is None or cell.value is None or str(cell.value).strip() in ("", "-"):
@@ -509,7 +477,6 @@ def get_formatted_value(cell):
             val_str = format_meaningful_decimals(val)
     return val_str
 
-
 def format_sub_weight(val):
     if val is None or val == "" or val == "-":
         return "-"
@@ -518,13 +485,11 @@ def format_sub_weight(val):
     except Exception:
         return str(val).split(".")[0].replace(",", "").strip()
 
-
 def extract_set_count(text):
     if not text:
         return None
     m = re.search(r"(\d+)\s*조", str(text))
     return int(m.group(1)) if m else None
-
 
 def clean_sensor_type(val):
     if not val:
@@ -538,7 +503,6 @@ def clean_sensor_type(val):
     val = re.sub(r"\(\s+", "(", val)
     val = re.sub(r"\s+\)", ")", val)
     return val
-
 
 def format_capacity_and_resolution_robust(cap_raw, res_raw):
     c_str = clean_text(cap_raw)
@@ -592,7 +556,6 @@ def format_capacity_and_resolution_robust(cap_raw, res_raw):
             div_str = r_norm
     return max_str, div_str, is_dual
 
-
 def safe_load_workbook(uploaded_file, data_only=True):
     uploaded_file.seek(0)
     try:
@@ -640,8 +603,8 @@ with col_right:
             unsafe_allow_html=True,
         )
 
-        # 1열로 텍스트와 라디오 버튼을 나란히 정렬하여 가시성 및 디자인 통일감 극대화
-        c_ico_t, c_lbl_t, c_opt_t = st.columns([0.7, 2.0, 2.4])
+        # 1열 메뉴 깔끔한 정렬 (아이콘 + 제목 + 버튼)
+        c_ico_t, c_lbl_t, c_opt_t = st.columns([0.7, 2.3, 2.1])
         with c_ico_t:
             st.markdown('<div class="opt-icon-box" style="color: #2563EB;">📋</div>', unsafe_allow_html=True)
         with c_lbl_t:
@@ -650,7 +613,7 @@ with col_right:
                 unsafe_allow_html=True,
             )
         with c_opt_t:
-            st.markdown('<div style="margin-top: 2px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top: 4px;"></div>', unsafe_allow_html=True)
             slot_type = st.radio(
                 "기록지 양식 선택",
                 options=["10칸", "12칸"],
@@ -734,10 +697,63 @@ with col_left:
             help=".xlsx, .xlsm 형식의 교정 성적서 다중 업로드를 지원합니다.",
         )
 
-        file_cnt = len(uploaded_files) if uploaded_files else 0
+        # X 버튼으로 삭제된 파일을 제외한 실제 활성화된 파일 리스트 생성
+        active_files = [f for f in (uploaded_files or []) if f.name not in st.session_state["deleted_files"]]
+
+        # 정렬 로직 (중간 5자리 번호 -> 뒤 3자리 번호 기준 오름차순)
+        if active_files and st.session_state.get("sort_enabled", False):
+            def sort_key(file_obj):
+                m = re.search(r"-(\d{5})-(\d{3})", file_obj.name)
+                if m:
+                    return (m.group(1), int(m.group(2)))
+                return (file_obj.name, 0)
+            active_files = sorted(active_files, key=sort_key)
+
+        file_cnt = len(active_files) if active_files else 0
+        
+        # 파일이 첨부되면 기본 UI의 안내 문구 및 아이콘을 CSS로 숨김 처리
+        if file_cnt > 0:
+            st.markdown("""
+            <style>
+            div[data-testid="stFileUploader"] section::before { display: none !important; }
+            div[data-testid="stFileUploader"] [data-testid="stIconMaterial"] { display: none !important; }
+            div[data-testid="stFileUploader"] section .stMarkdown { display: none !important; }
+            div[data-testid="stFileUploader"] section { 
+                padding: 1.2rem !important; 
+                min-height: 40px !important; 
+                border-color: #CBD5E1 !important; 
+                background: #F8FAFC !important; 
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            # 커스텀 3열 파일 리스트 렌더링
+            with st.container(key="custom_grid"):
+                for i in range(0, len(active_files), 3):
+                    cols = st.columns(3)
+                    for j in range(3):
+                        if i + j < len(active_files):
+                            f = active_files[i + j]
+                            # 확장자 완전 삭제 처리
+                            display_name = re.sub(r'\.xlsx$|\.xlsm$', '', f.name, flags=re.IGNORECASE)
+                            with cols[j]:
+                                with st.container(border=True):
+                                    cc1, cc2, cc3 = st.columns([0.15, 0.7, 0.15], gap="small")
+                                    with cc1:
+                                        # 초록색 시트 엑셀 느낌의 아이콘
+                                        st.markdown("<div style='font-size:1.15rem; color:#10B981; margin-top:0.25rem; text-align:center;'>📗</div>", unsafe_allow_html=True)
+                                    with cc2:
+                                        # 1~X 넘버링 및 파일 이름 표기 (용량 제거)
+                                        st.markdown(f"<div style='font-size:0.85rem; font-weight:700; padding-top:0.35rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1E293B;' title='{display_name}'>{i+j+1}. {display_name}</div>", unsafe_allow_html=True)
+                                    with cc3:
+                                        # 50% 확대된 X 삭제 버튼
+                                        if st.button("✖", key=f"del_{f.name}_{st.session_state['uploader_key']}", help="해당 파일 제외"):
+                                            st.session_state['deleted_files'].append(f.name)
+                                            st.rerun()
+
         st.markdown(
             f"""
-            <div class="section-header" style="margin-top: 0.2rem; margin-bottom: 0.9rem;">
+            <div class="section-header" style="margin-top: 0.8rem; margin-bottom: 0.9rem;">
                 <div class="section-title">📥 업로드 대기열</div>
                 <span class="section-pill">총 {file_cnt}개 파일 첨부됨</span>
             </div>
@@ -751,12 +767,12 @@ with col_left:
             if st.button("🗑️ 초기화", use_container_width=True, help="업로드된 파일을 모두 비웁니다."):
                 st.session_state["uploader_key"] += 1
                 st.session_state["sort_enabled"] = False
+                st.session_state["deleted_files"] = []
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
             
         with c_sort:
-            st.markdown('<div class="action-btn-del">', unsafe_allow_html=True)
-            # 성적서 중간 번호 및 뒷번호 기준 오름차순 정렬 트리거 버튼
+            st.markdown('<div class="action-btn-sort">', unsafe_allow_html=True)
             if st.button("⬇️ 오름차순 정렬", use_container_width=True, help="성적서 번호 규칙에 따라 오름차순으로 정렬합니다."):
                 st.session_state["sort_enabled"] = True
                 st.rerun()
@@ -779,17 +795,7 @@ bottom_result_container = st.container()
 # [실행부: 엑셀 파싱 및 기록지 생성 로직]
 # ==============================================================================
 
-# 정렬 활성화 시 uploaded_files 내부 리스트 재정렬 처리
-if uploaded_files and st.session_state.get("sort_enabled", False):
-    def sort_key(file_obj):
-        # 정규식 패턴: 성적서 번호 5자리와 마지막 3자리(000)를 추출하여 키로 사용
-        m = re.search(r"-(\d{5})-(\d{3})", file_obj.name)
-        if m:
-            return (m.group(1), int(m.group(2)))
-        return (file_obj.name, 0)
-    uploaded_files = sorted(uploaded_files, key=sort_key)
-
-should_run = (auto_mode and uploaded_files) or (not auto_mode and uploaded_files and manual_run)
+should_run = (auto_mode and active_files) or (not auto_mode and active_files and manual_run)
 
 if not os.path.exists(TEMPLATE_FILE):
     st.error(f"⚠️ 작업 폴더에 '{TEMPLATE_FILE}' 양식 파일이 존재하지 않습니다. 파일을 확인해 주세요.")
@@ -800,7 +806,7 @@ elif should_run:
             global_client_name = ""
             error_files = []
 
-            for file_idx, file in enumerate(uploaded_files, start=1):
+            for file_idx, file in enumerate(active_files, start=1):
                 fname = os.path.basename(file.name).upper()
                 wb_src = None
                 try:
@@ -2151,7 +2157,7 @@ elif should_run:
                 wb_out.close()
 
                 safe_client = re.sub(r'[\/:*?"<>|() ]', "", str(global_client_name)) or "미상업체"
-                out_name = f"기록지({MAX_SLOTS_PER_PAGE}칸)_{safe_client}_총{len(uploaded_files)}건_({total_pages_needed}P).xlsx"
+                out_name = f"기록지({MAX_SLOTS_PER_PAGE}칸)_{safe_client}_총{len(active_files)}건_({total_pages_needed}P).xlsx"
                 
                 # ========================================================
                 # 다운로드 버튼 렌더링 (좌측 컨트롤 패널 영역으로 이동)
@@ -2187,7 +2193,7 @@ elif should_run:
                             "🏢 의뢰 업체명",
                             str(global_client_name) if global_client_name else "미확인",
                         )
-                        m_c2.metric("📑 처리된 성적서", f"{len(uploaded_files)} 건")
+                        m_c2.metric("📑 처리된 성적서", f"{len(active_files)} 건")
                         m_c3.metric("🎯 사용 슬롯", f"{total_slots_used} 칸 ({MAX_SLOTS_PER_PAGE}칸 양식)")
                         m_c4.metric("📄 생성 페이지", f"{total_pages_needed} 페이지")
 
