@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.2 (다운로드 버튼 위치 최적화 - 스크롤 없이 즉시 다운로드 가능하도록 UI 개선)
+버전: v6.3 (업로드 박스 UI 최적화 / 오름차순 자동 정렬 추가 / 양식 선택 메뉴 가시성 개선)
 """
 
 import io
@@ -181,7 +181,9 @@ st.markdown(
         box-shadow: var(--shadow-md) !important;
     }
 
-    /* 파일 업로더 드롭존 커스텀 */
+    /* ----------------------------------------------------
+       파일 업로더 드롭존 & 3열 리스트 커스텀 (핵심 업데이트)
+       ---------------------------------------------------- */
     div[data-testid="stFileUploader"] {
         width: 100% !important;
         margin-top: 0 !important;
@@ -190,6 +192,12 @@ st.markdown(
     div[data-testid="stFileUploader"] > label {
         display: none !important;
     }
+    
+    /* 파일 하나라도 첨부시 드롭존 숨기기 (CSS4 :has 속성 활용) */
+    div[data-testid="stFileUploader"]:has(ul[data-testid="stUploadedFileList"]) section {
+        display: none !important;
+    }
+
     div[data-testid="stFileUploader"] section {
         position: relative !important;
         padding: 2.8rem 1.4rem 1.6rem 1.4rem !important;
@@ -215,13 +223,84 @@ st.markdown(
         border-color: var(--accent-primary) !important;
         background: #EFF6FF !important;
     }
-    div[data-testid="stFileUploader"] [data-testid="stIconMaterial"] {
-        font-family: 'Material Symbols Rounded', 'Material Icons' !important;
-    }
     div[data-testid="stFileUploader"] button {
         border-radius: 10px !important;
         font-size: 0.88rem !important;
         font-weight: 700 !important;
+    }
+
+    /* 3열 그리드 레이아웃 설정 */
+    ul[data-testid="stUploadedFileList"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.6rem !important;
+        padding: 0.5rem 0 !important;
+        counter-reset: file-counter;
+    }
+    
+    li[data-testid="stUploadedFile"] {
+        width: 100% !important;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        padding: 0.4rem 0.5rem !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        position: relative;
+        counter-increment: file-counter;
+    }
+    
+    /* 1~X 넘버링 배지 설정 */
+    li[data-testid="stUploadedFile"]::before {
+        content: counter(file-counter);
+        position: absolute;
+        left: -6px;
+        top: -6px;
+        background: #10B981;
+        color: #FFFFFF;
+        font-size: 0.65rem;
+        font-weight: 900;
+        width: 1.3rem;
+        height: 1.3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+    
+    /* 엑셀 초록색 아이콘화 및 파일명 포맷팅 */
+    div[data-testid="stUploadedFile"] svg {
+        color: #10B981 !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        margin-right: 0.3rem !important;
+    }
+    
+    /* 용량 텍스트 숨기기 */
+    div[data-testid="stUploadedFile"] small {
+        display: none !important;
+    }
+    
+    /* 파일명 길이 제어 (확장자 가리기 효과 적용) */
+    div[data-testid="stUploadedFile"] .stMarkdown {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        max-width: 85% !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+    }
+    
+    /* X 삭제 아이콘 50% 확대 */
+    button[data-testid="stUploadedFileDelete"] {
+        transform: scale(1.5) !important;
+        margin-right: 0.2rem !important;
+        color: #EF4444 !important;
+        background: transparent !important;
+    }
+    button[data-testid="stUploadedFileDelete"]:hover {
+        color: #DC2626 !important;
     }
 
     /* 옵션 아이템 행 스타일 */
@@ -262,13 +341,13 @@ st.markdown(
 
     /* 양식 선택 라디오 버튼 모던 스타일링 */
     div[data-testid="stRadio"] > div {
-        gap: 0.6rem !important;
-        margin-top: 0.35rem !important;
+        gap: 0.4rem !important;
+        margin-top: 0 !important;
     }
     div[data-testid="stRadio"] label {
         background: #F8FAFC;
         border: 1px solid #E2E8F0;
-        padding: 0.42rem 0.9rem !important;
+        padding: 0.4rem 0.8rem !important;
         border-radius: 10px;
         font-weight: 700 !important;
         font-size: 0.86rem !important;
@@ -299,7 +378,7 @@ st.markdown(
         border: 1px solid #CBD5E1 !important;
         background: #FFFFFF !important;
         color: #475569 !important;
-        font-size: 0.94rem !important;
+        font-size: 0.9rem !important;
         font-weight: 700 !important;
         border-radius: 12px !important;
         transition: all 0.2s ease !important;
@@ -326,31 +405,6 @@ st.markdown(
         box-shadow: none !important;
     }
 
-    /* 메트릭 카드 디자인 */
-    div[data-testid="stMetric"] {
-        background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 16px !important;
-        padding: 1rem 1.15rem !important;
-        box-shadow: var(--shadow-sm) !important;
-        min-width: 0 !important;
-        width: 100% !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        font-size: 0.82rem !important;
-        font-weight: 700 !important;
-        color: #64748B !important;
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 1.38rem !important;
-        font-weight: 800 !important;
-        color: #0F172A !important;
-        white-space: normal !important;
-        word-break: break-all !important;
-        line-height: 1.25 !important;
-        margin-top: 0.25rem !important;
-    }
-
     /* 다운로드 버튼 강조 */
     div[data-testid="stDownloadButton"] button {
         height: 54px !important;
@@ -367,45 +421,6 @@ st.markdown(
         transform: translateY(-1px) !important;
         box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.48) !important;
     }
-
-    /* 모바일 및 태블릿 반응형 최적화 */
-    @media (max-width: 768px) {
-        .block-container {
-            padding-top: 1rem !important;
-            padding-left: 0.85rem !important;
-            padding-right: 0.85rem !important;
-            padding-bottom: 2.5rem !important;
-        }
-        .hero-card {
-            padding: 1.35rem 1.2rem;
-            border-radius: 16px;
-            margin-bottom: 1.1rem;
-        }
-        .hero-title {
-            font-size: 1.75rem;
-        }
-        .hero-desc {
-            font-size: 0.84rem;
-            margin-bottom: 1rem;
-        }
-        .chip {
-            padding: 0.3rem 0.65rem;
-            font-size: 0.75rem;
-        }
-        div[data-testid="stFileUploader"] section {
-            padding: 2.6rem 0.9rem 1.2rem 0.9rem !important;
-        }
-        div[data-testid="stFileUploader"] section::before {
-            font-size: 0.84rem;
-            top: 12px;
-        }
-        div[data-testid="stMetric"] {
-            padding: 0.8rem 0.9rem !important;
-        }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.15rem !important;
-        }
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -418,14 +433,14 @@ st.markdown(
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
 
+if "sort_enabled" not in st.session_state:
+    st.session_state["sort_enabled"] = False
+
 # 신규 기록지 양식(1슬롯 = 6행, 가운데 3~4번째 행 병합)에 맞춘 포인트별 행 오프셋
-# 1~5번째 측정점: 첫 번째 슬롯의 +0, +1, +2(병합상단), +4, +5 행
-# 6~10번째 측정점: 두 번째 슬롯의 +6, +7, +8(병합상단), +10, +11 행
 PT_ROW_OFFSETS = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]
 
 
 def clean_text(v):
-    """보이지 않는 공백 문자(한글 채움 문자, Zero-width space 등) 및 수식 잔여물 제거"""
     if v is None:
         return ""
     s = str(v)
@@ -436,7 +451,6 @@ def clean_text(v):
 
 
 def get_decimal_places(val):
-    """숫자 또는 문자열에서 유효 소수점 자릿수 계산 (부동소수점 오차 보정 포함)"""
     if val is None or str(val).strip() in ("", "-"):
         return 0
     try:
@@ -455,7 +469,6 @@ def get_decimal_places(val):
 
 
 def format_number(val, decimals):
-    """지정된 소수점 자릿수로 반올림 포맷팅"""
     if val is None or val == "" or val == "-":
         return "-"
     try:
@@ -468,7 +481,6 @@ def format_number(val, decimals):
 
 
 def format_meaningful_decimals(val):
-    """무의미한 소수점(.00)을 제거하고 유의미한 값만 문자열로 반환"""
     if val is None or str(val).strip() in ("", "-"):
         return "-"
     try:
@@ -481,12 +493,10 @@ def format_meaningful_decimals(val):
 
 
 def get_formatted_value(cell):
-    """Excel 셀 서식(number_format)을 분석하여 화면에 표시되는 소수점 그대로 문자열 반환"""
     if cell is None or cell.value is None or str(cell.value).strip() in ("", "-"):
         return None
     val = cell.value
     val_str = clean_text(val)
-
     if isinstance(val, (int, float)):
         fmt = str(cell.number_format or "General")
         if "." in fmt:
@@ -497,12 +507,10 @@ def get_formatted_value(cell):
             val_str = f"{int(val)}"
         else:
             val_str = format_meaningful_decimals(val)
-
     return val_str
 
 
 def format_sub_weight(val):
-    """호퍼 저울 가분동 정수 포맷팅"""
     if val is None or val == "" or val == "-":
         return "-"
     try:
@@ -512,7 +520,6 @@ def format_sub_weight(val):
 
 
 def extract_set_count(text):
-    """텍스트에서 '(X조)' 또는 'X조' 숫자 추출"""
     if not text:
         return None
     m = re.search(r"(\d+)\s*조", str(text))
@@ -520,7 +527,6 @@ def extract_set_count(text):
 
 
 def clean_sensor_type(val):
-    """온도계 센서 타입에서 불필요한 None, 잉여 괄호, 공백 등을 깔끔하게 정제"""
     if not val:
         return ""
     if "(단위" in val:
@@ -535,14 +541,11 @@ def clean_sensor_type(val):
 
 
 def format_capacity_and_resolution_robust(cap_raw, res_raw):
-    """저울 최대용량(MAX) 및 최소눈금(DIV) 단일/듀얼 레인지 텍스트 표준화"""
     c_str = clean_text(cap_raw)
     r_str = clean_text(res_raw)
-
     c_norm = re.sub(r"(\d+)\s+(\d{3})(?!\d)", r"\1\2", c_str)
     r_norm = re.sub(r"(\d+)\s+(\d{3})(?!\d)", r"\1\2", r_str)
     c_norm_check = re.sub(r"(\d+),(\d{3})(?!\d)", r"\1\2", c_norm)
-
     is_dual = False
     if ("," in r_norm or "/" in r_norm) and len(re.findall(r"[\d\.]+", r_norm)) >= 2:
         is_dual = True
@@ -587,12 +590,10 @@ def format_capacity_and_resolution_robust(cap_raw, res_raw):
             div_str = f"{int(f) if f.is_integer() else f} {unit_r}"
         else:
             div_str = r_norm
-
     return max_str, div_str, is_dual
 
 
 def safe_load_workbook(uploaded_file, data_only=True):
-    """업로드된 엑셀 스트림을 안전하게 로드"""
     uploaded_file.seek(0)
     try:
         return openpyxl.load_workbook(uploaded_file, data_only=data_only)
@@ -639,24 +640,26 @@ with col_right:
             unsafe_allow_html=True,
         )
 
-        # 기록지 양식 선택 (10칸 / 12칸)
-        c_ico_t, c_lbl_t = st.columns([0.7, 4.4])
+        # 1열로 텍스트와 라디오 버튼을 나란히 정렬하여 가시성 및 디자인 통일감 극대화
+        c_ico_t, c_lbl_t, c_opt_t = st.columns([0.7, 2.0, 2.4])
         with c_ico_t:
             st.markdown('<div class="opt-icon-box" style="color: #2563EB;">📋</div>', unsafe_allow_html=True)
         with c_lbl_t:
             st.markdown(
-                '<div class="opt-main-lbl">기록지 양식 선택</div><div class="opt-sub-lbl">페이지당 출력할 기록지 칸 수 (10칸 / 12칸)</div>',
+                '<div class="opt-main-lbl" style="margin-top: 10px;">기록지 양식 선택</div>',
                 unsafe_allow_html=True,
             )
+        with c_opt_t:
+            st.markdown('<div style="margin-top: 2px;"></div>', unsafe_allow_html=True)
             slot_type = st.radio(
                 "기록지 양식 선택",
-                options=["10칸 기록지", "12칸 기록지"],
+                options=["10칸", "12칸"],
                 index=0,
                 horizontal=True,
                 label_visibility="collapsed",
             )
 
-        MAX_SLOTS_PER_PAGE = 12 if "12칸" in slot_type else 10
+        MAX_SLOTS_PER_PAGE = 12 if "12" in slot_type else 10
         TEMPLATE_FILE = "12칸 기록지.xlsx" if MAX_SLOTS_PER_PAGE == 12 else "10칸 기록지.xlsx"
 
         st.markdown('<div class="opt-divider"></div>', unsafe_allow_html=True)
@@ -736,17 +739,26 @@ with col_left:
             f"""
             <div class="section-header" style="margin-top: 0.2rem; margin-bottom: 0.9rem;">
                 <div class="section-title">📥 업로드 대기열</div>
-                <span class="section-pill">총 {file_cnt}개 파일 선택됨</span>
+                <span class="section-pill">총 {file_cnt}개 파일 첨부됨</span>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        c_del, c_run = st.columns([1, 1.2], gap="small")
+        c_del, c_sort, c_run = st.columns([0.9, 0.9, 1.2], gap="small")
         with c_del:
             st.markdown('<div class="action-btn-del">', unsafe_allow_html=True)
-            if st.button("🗑️ 전체 초기화", use_container_width=True, help="업로드된 모든 파일을 즉시 비웁니다."):
+            if st.button("🗑️ 초기화", use_container_width=True, help="업로드된 파일을 모두 비웁니다."):
                 st.session_state["uploader_key"] += 1
+                st.session_state["sort_enabled"] = False
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        with c_sort:
+            st.markdown('<div class="action-btn-del">', unsafe_allow_html=True)
+            # 성적서 중간 번호 및 뒷번호 기준 오름차순 정렬 트리거 버튼
+            if st.button("⬇️ 오름차순 정렬", use_container_width=True, help="성적서 번호 규칙에 따라 오름차순으로 정렬합니다."):
+                st.session_state["sort_enabled"] = True
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -766,6 +778,16 @@ bottom_result_container = st.container()
 # ==============================================================================
 # [실행부: 엑셀 파싱 및 기록지 생성 로직]
 # ==============================================================================
+
+# 정렬 활성화 시 uploaded_files 내부 리스트 재정렬 처리
+if uploaded_files and st.session_state.get("sort_enabled", False):
+    def sort_key(file_obj):
+        # 정규식 패턴: 성적서 번호 5자리와 마지막 3자리(000)를 추출하여 키로 사용
+        m = re.search(r"-(\d{5})-(\d{3})", file_obj.name)
+        if m:
+            return (m.group(1), int(m.group(2)))
+        return (file_obj.name, 0)
+    uploaded_files = sorted(uploaded_files, key=sort_key)
 
 should_run = (auto_mode and uploaded_files) or (not auto_mode and uploaded_files and manual_run)
 
@@ -1895,7 +1917,6 @@ elif should_run:
                                     nom_cell = ws_rec.cell(r, nom_col)
                                     avg_cell = ws_rec.cell(r, avg_col)
 
-                                    # 명목값이 비어 있는 행(예: 수식만 남은 마지막 빈 행)은 건너뜀
                                     if nom_cell.value is None or str(nom_cell.value).strip() == "":
                                         continue
 
@@ -1904,7 +1925,6 @@ elif should_run:
                                     except ValueError:
                                         continue
 
-                                    # 직선성 시험에서 제일 처음 최초 시작되는 명목값이 0일 때만 제외
                                     if not first_valid_row_checked:
                                         first_valid_row_checked = True
                                         if abs(f_nom) < 1e-9:
@@ -2005,7 +2025,7 @@ elif should_run:
                 )
 
             if all_instruments:
-                # 1. 각 기기별 페이지 및 슬롯 위치 사전 배정 (2칸짜리 기기가 페이지 경계에 걸리면 다음 페이지로 이월)
+                # 1. 각 기기별 페이지 및 슬롯 위치 사전 배정
                 placements = []
                 curr_slot = 0
                 total_slots_used = 0
@@ -2056,47 +2076,28 @@ elif should_run:
                     res_dec = inst["res_dec"]
                     ws_curr = sheet_list[page_idx]
 
-                    # 신규 양식: 1슬롯당 6행 차지 (4행, 10행, 16행 ...)
                     start_row = 4 + slot_in_page * 6
 
-                    # A열: No
                     if not del_number and inst["cert_file_no"]:
                         ws_curr.cell(row=start_row, column=1, value=inst["cert_file_no"])
 
-                    # B열: 기기명 (서브채널은 기기명만 비움)
-                    dev_name_to_write = (
-                        "" if inst.get("is_sub_channel") else str(inst["device_name"])
-                    )
+                    dev_name_to_write = "" if inst.get("is_sub_channel") else str(inst["device_name"])
                     cell_dev = ws_curr.cell(row=start_row, column=2, value=dev_name_to_write)
-                    cell_dev.alignment = Alignment(
-                        horizontal="center", vertical="center", wrap_text=True
-                    )
+                    cell_dev.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-                    # C열: 제조사(상단 3행 병합) / 모델(하단 3행 병합 -> start_row + 3)
                     maker_to_write = str(inst["maker"])
                     if inst.get("is_sub_channel"):
                         model_to_write = ""
                     else:
-                        model_to_write = (
-                            ""
-                            if inst["type_kind"] in ["압력계", "힘 시험기"]
-                            else str(inst["model"])
-                        )
+                        model_to_write = "" if inst["type_kind"] in ["압력계", "힘 시험기"] else str(inst["model"])
 
                     ws_curr.cell(row=start_row, column=3, value=maker_to_write)
                     ws_curr.cell(row=start_row + 3, column=3, value=model_to_write)
-
-                    # D열: 기기번호
                     ws_curr.cell(row=start_row, column=4, value=str(inst["serial"]))
-
-                    # E열: MAX(상단 3행 병합) / DIV(하단 3행 병합 -> start_row + 3)
                     ws_curr.cell(row=start_row, column=5, value=str(inst["max_str"]))
                     ws_curr.cell(row=start_row + 3, column=5, value=str(inst["div_str"]))
-
-                    # F열: 방식 / 구분 / 타입
                     ws_curr.cell(row=start_row, column=6, value=str(inst["gubun"]))
 
-                    # G열 & H열: 범위 및 측정결과 (신규 6행 슬롯 내 병합 구조 대응)
                     nom_preview_list = []
                     ind_preview_list = []
 
@@ -2128,16 +2129,13 @@ elif should_run:
                         if not del_data:
                             ws_curr.cell(row=target_r, column=8, value=ind_val_str)
 
-                    # I열: 교정번호 공란
                     ws_curr.cell(row=start_row, column=9, value="")
 
                     preview_rows.append(
                         {
                             "No": inst["cert_file_no"] if inst["cert_file_no"] else "-",
                             "분류": inst["type_kind"],
-                            "기기명": dev_name_to_write.replace("\n", " ")
-                            if dev_name_to_write
-                            else "(상동/서브채널)",
+                            "기기명": dev_name_to_write.replace("\n", " ") if dev_name_to_write else "(상동/서브채널)",
                             "제조사": maker_to_write,
                             "기기번호": inst["serial"],
                             "MAX / DIV": f"{inst['max_str']} / {inst['div_str']}".strip(" /"),
