@@ -1531,11 +1531,11 @@ elif should_run:
                 cell_dev.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
                 # C열: 제조사 / 모델
+                maker_to_write = str(inst["maker"])
+                
                 if inst.get("is_sub_channel"):
-                    maker_to_write = ""
                     model_to_write = ""
                 else:
-                    maker_to_write = str(inst["maker"])
                     model_to_write = "" if inst["type_kind"] in ["압력계", "힘 시험기"] else str(inst["model"])
                     
                 ws_curr.cell(row=start_row, column=3, value=maker_to_write)
