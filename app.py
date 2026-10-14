@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v5.5 (온도기록계 다채널/괄호, 압력 소수점 포맷 및 숨김 행/0값 처리 완벽 패치)
+버전: v5.6 (자동호퍼저울 채널 중복 표기 개선 및 단일 표기 / 온도계 타입 None 및 괄호 정제 완벽 패치)
 """
 
 import io
@@ -460,6 +460,24 @@ def clean_text(v):
         return ""
     return s
 
+def clean_sensor_type(val):
+    """온도계 센서 타입에서 불필요한 None, 잉여 괄호, 공백 등을 정제하여 반환"""
+    if not val: return ""
+    # '(단위' 이후 제거
+    if '(단위' in val:
+        val = val.split('(단위')[0]
+    # None 문자 제거
+    val = val.replace("None", "").strip()
+    # 닫는 괄호가 여는 괄호보다 많을 때 (예: "PT100(3916) )" 처리)
+    while val.count(')') > val.count('('):
+        val = val.rsplit(')', 1)[0].strip()
+    # Type, type 글자 제거
+    val = re.sub(r'\s+[tT]ype', '', val).strip()
+    # 괄호 내부 공백 정리
+    val = re.sub(r'\(\s+', '(', val)
+    val = re.sub(r'\s+\)', ')', val)
+    return val
+
 def format_capacity_and_resolution_robust(cap_raw, res_raw):
     c_str = str(cap_raw or "").strip()
     r_str = str(res_raw or "").strip()
@@ -660,6 +678,8 @@ elif should_run:
                         total_sets = max_num if max_num > 0 else 3
 
                     clean_dev = raw_device_name.replace("자동호퍼저울", "자동 호퍼 저울").strip()
+                    # (X조) 텍스트 중복 제거 로직
+                    clean_dev = re.sub(r'\(\d+\s*조\)', '', clean_dev).strip()
                     dev_disp = f"{clean_dev}\n<{total_sets}조>"
 
                     for r_idx, r_vals in enumerate(all_rec_rows):
@@ -702,6 +722,7 @@ elif should_run:
                                         })
                                         if len(pts) >= 10:
                                             break
+                            
                             file_instruments.append({
                                 "type_kind": "호퍼 저울",
                                 "cert_no": cert_no,
@@ -714,6 +735,7 @@ elif should_run:
                                 "res_dec": get_decimal_places(res),
                                 "gubun": gubun,
                                 "pts": pts,
+                                "is_sub_channel": num > 1  # 두번째 채널(조)부터는 기기명 빈칸 처리
                             })
 
                 # ========================================================
@@ -939,13 +961,7 @@ elif should_run:
                             if "온도교정" in r_str or "온도 교정" in r_str:
                                 m_t = re.search(r'온도\s*교정\s*[\(（](.*)', r_str)
                                 if m_t:
-                                    t_val = m_t.group(1)
-                                    if '(단위' in t_val:
-                                        t_val = t_val.split('(단위')[0]
-                                    t_val = t_val.strip()
-                                    if t_val.endswith(')') or t_val.endswith('）'):
-                                        t_val = t_val[:-1].strip()
-                                    sheet_sensor_type = re.sub(r'\s+[tT]ype', '', t_val).strip()
+                                    sheet_sensor_type = clean_sensor_type(m_t.group(1))
                                     break
 
                         r_i = 0
@@ -966,13 +982,7 @@ elif should_run:
                                 ch_type = sheet_sensor_type
                                 m_local_t = re.search(r'온도\s*교정\s*[\(（](.*)', r_str)
                                 if m_local_t:
-                                    lt_val = m_local_t.group(1)
-                                    if '(단위' in lt_val:
-                                        lt_val = lt_val.split('(단위')[0]
-                                    lt_val = lt_val.strip()
-                                    if lt_val.endswith(')') or lt_val.endswith('）'):
-                                        lt_val = lt_val[:-1].strip()
-                                    ch_type = re.sub(r'\s+[tT]ype', '', lt_val).strip()
+                                    ch_type = clean_sensor_type(m_local_t.group(1))
 
                                 nom_col = None
                                 ind_col = None
@@ -1043,13 +1053,7 @@ elif should_run:
                             if "온도교정" in val_t or "온도 교정" in val_t:
                                 m_s = re.search(r'온도\s*교정\s*[\(（](.*)', val_t)
                                 if m_s:
-                                    lt_val = m_s.group(1)
-                                    if '(단위' in lt_val:
-                                        lt_val = lt_val.split('(단위')[0]
-                                    lt_val = lt_val.strip()
-                                    if lt_val.endswith(')') or lt_val.endswith('）'):
-                                        lt_val = lt_val[:-1].strip()
-                                    fallback_type = re.sub(r'\s+[tT]ype', '', lt_val).strip()
+                                    fallback_type = clean_sensor_type(m_s.group(1))
                                 break
 
                         pts = []
