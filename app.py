@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.0 (전기식 저울 2.2 직선성시험 정밀 추출 / 코드 최적화 / 반응형 모던 UI 리뉴얼)
+버전: v6.1 (10칸/12칸 기록지 양식 선택 지원 / 신규 6행 슬롯 병합 구조 대응 / UI 문구 리뉴얼)
 """
 
 import io
@@ -85,20 +85,6 @@ st.markdown(
         height: 360px;
         background: radial-gradient(circle, rgba(59, 130, 246, 0.22) 0%, transparent 70%);
         pointer-events: none;
-    }
-    .hero-top-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(59, 130, 246, 0.18);
-        border: 1px solid rgba(96, 165, 250, 0.35);
-        color: #93C5FD;
-        font-size: 0.78rem;
-        font-weight: 700;
-        padding: 0.28rem 0.75rem;
-        border-radius: 9999px;
-        margin-bottom: 0.75rem;
-        letter-spacing: 0.02em;
     }
     .hero-title {
         font-size: clamp(2.1rem, 4.5vw, 3.1rem);
@@ -274,6 +260,25 @@ st.markdown(
         margin: 0.5rem 0;
     }
 
+    /* 양식 선택 라디오 버튼 모던 스타일링 */
+    div[data-testid="stRadio"] > div {
+        gap: 0.6rem !important;
+        margin-top: 0.35rem !important;
+    }
+    div[data-testid="stRadio"] label {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        padding: 0.42rem 0.9rem !important;
+        border-radius: 10px;
+        font-weight: 700 !important;
+        font-size: 0.86rem !important;
+        transition: all 0.15s ease;
+    }
+    div[data-testid="stRadio"] label:hover {
+        border-color: var(--accent-primary);
+        background: #EFF6FF;
+    }
+
     .info-callout {
         background: #F0F9FF;
         border: 1px solid #BAE6FD;
@@ -410,10 +415,13 @@ st.markdown(
 # [백엔드 유틸리티 및 정밀 포맷팅 함수]
 # ==============================================================================
 
-TEMPLATE_FILE = "10칸 기록지.xlsx"
-
 if "uploader_key" not in st.session_state:
     st.session_state["uploader_key"] = 0
+
+# 신규 기록지 양식(1슬롯 = 6행, 가운데 3~4번째 행 병합)에 맞춘 포인트별 행 오프셋
+# 1~5번째 측정점: 첫 번째 슬롯의 +0, +1, +2(병합상단), +4, +5 행
+# 6~10번째 측정점: 두 번째 슬롯의 +6, +7, +8(병합상단), +10, +11 행
+PT_ROW_OFFSETS = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]
 
 
 def clean_text(v):
@@ -599,12 +607,11 @@ def safe_load_workbook(uploaded_file, data_only=True):
 st.markdown(
     """
     <div class="hero-card">
-        <div class="hero-top-badge">⚡ AUTOMATED CALIBRATION RECORD SYSTEM v6.0</div>
         <div class="hero-title">
             KCS <span class="hero-title-accent">딸깍 기록지</span>
         </div>
         <div class="hero-desc">
-            교정 성적서 엑셀 파일을 업로드하면 <b>10칸 교정점검표 양식</b>으로 즉시 자동 변환합니다.<br>
+            교정 성적서 엑셀 파일을 업로드하면 즉시 자동 변환합니다.<br>
             ⚠️ 변환 결과에 일부 차이가 있을 수 있으니 최종 확인을 권장드리며, 오류나 업데이트 문의는 <b>D</b>에게 전달해 주세요.
         </div>
         <div class="badge-wrap">
@@ -631,6 +638,28 @@ with col_right:
             """,
             unsafe_allow_html=True,
         )
+
+        # 기록지 양식 선택 (10칸 / 12칸)
+        c_ico_t, c_lbl_t = st.columns([0.7, 4.4])
+        with c_ico_t:
+            st.markdown('<div class="opt-icon-box" style="color: #2563EB;">📋</div>', unsafe_allow_html=True)
+        with c_lbl_t:
+            st.markdown(
+                '<div class="opt-main-lbl">기록지 양식 선택</div><div class="opt-sub-lbl">페이지당 출력할 기록지 칸 수 (10칸 / 12칸)</div>',
+                unsafe_allow_html=True,
+            )
+            slot_type = st.radio(
+                "기록지 양식 선택",
+                options=["10칸 기록지", "12칸 기록지"],
+                index=0,
+                horizontal=True,
+                label_visibility="collapsed",
+            )
+
+        MAX_SLOTS_PER_PAGE = 12 if "12칸" in slot_type else 10
+        TEMPLATE_FILE = "12칸 기록지.xlsx" if MAX_SLOTS_PER_PAGE == 12 else "10칸 기록지.xlsx"
+
+        st.markdown('<div class="opt-divider"></div>', unsafe_allow_html=True)
 
         c_ico0, c_lbl0, c_sw0 = st.columns([0.7, 3.3, 1.1])
         with c_ico0:
@@ -740,7 +769,7 @@ should_run = (auto_mode and uploaded_files) or (not auto_mode and uploaded_files
 if not os.path.exists(TEMPLATE_FILE):
     st.error(f"⚠️ 작업 폴더에 '{TEMPLATE_FILE}' 양식 파일이 존재하지 않습니다. 파일을 확인해 주세요.")
 elif should_run:
-    with st.spinner("⚡ 성적서 데이터를 정밀 분석하여 10칸 기록지를 생성하고 있습니다..."):
+    with st.spinner(f"⚡ 성적서 데이터를 정밀 분석하여 {MAX_SLOTS_PER_PAGE}칸 기록지를 생성하고 있습니다..."):
         try:
             all_instruments = []
             global_client_name = ""
@@ -1973,10 +2002,25 @@ elif should_run:
                 )
 
             if all_instruments:
-                total_slots_needed = sum(
-                    [2 if len(inst["pts"]) > 5 else 1 for inst in all_instruments]
-                )
-                total_pages_needed = max(1, (total_slots_needed + 9) // 10)
+                # 1. 각 기기별 페이지 및 슬롯 위치 사전 배정 (2칸짜리 기기가 페이지 경계에 걸리면 다음 페이지로 이월)
+                placements = []
+                curr_slot = 0
+                total_slots_used = 0
+
+                for inst in all_instruments:
+                    slots_for_inst = 2 if len(inst["pts"]) > 5 else 1
+                    total_slots_used += slots_for_inst
+
+                    if (curr_slot % MAX_SLOTS_PER_PAGE) + slots_for_inst > MAX_SLOTS_PER_PAGE:
+                        curr_slot = ((curr_slot // MAX_SLOTS_PER_PAGE) + 1) * MAX_SLOTS_PER_PAGE
+
+                    page_idx = curr_slot // MAX_SLOTS_PER_PAGE
+                    slot_in_page = curr_slot % MAX_SLOTS_PER_PAGE
+                    placements.append((inst, page_idx, slot_in_page))
+                    curr_slot += slots_for_inst
+
+                total_pages_needed = max(1, (curr_slot + MAX_SLOTS_PER_PAGE - 1) // MAX_SLOTS_PER_PAGE)
+                max_row_limit = 3 + MAX_SLOTS_PER_PAGE * 6
 
                 wb_out = openpyxl.load_workbook(TEMPLATE_FILE)
                 ws_template = wb_out["교정점검표"]
@@ -1999,22 +2043,18 @@ elif should_run:
                     ws_target["I2"] = "   月    日"
                     ws_target["I2"].alignment = Alignment(horizontal="center", vertical="center")
 
-                    for slot_i in range(10):
-                        ws_target.cell(row=4 + slot_i * 5, column=1, value="")
+                    for slot_i in range(MAX_SLOTS_PER_PAGE):
+                        ws_target.cell(row=4 + slot_i * 6, column=1, value="")
 
-                current_global_slot = 0
                 preview_rows = []
 
-                for inst in all_instruments:
+                for inst, page_idx, slot_in_page in placements:
                     pts = inst["pts"]
                     res_dec = inst["res_dec"]
-                    slots_for_inst = 2 if len(pts) > 5 else 1
-
-                    page_idx = current_global_slot // 10
-                    slot_in_page = current_global_slot % 10
                     ws_curr = sheet_list[page_idx]
 
-                    start_row = 4 + slot_in_page * 5
+                    # 신규 양식: 1슬롯당 6행 차지 (4행, 10행, 16행 ...)
+                    start_row = 4 + slot_in_page * 6
 
                     # A열: No
                     if not del_number and inst["cert_file_no"]:
@@ -2029,7 +2069,7 @@ elif should_run:
                         horizontal="center", vertical="center", wrap_text=True
                     )
 
-                    # C열: 제조사 / 모델 (서브채널이어도 제조사는 항상 표시)
+                    # C열: 제조사(상단 3행 병합) / 모델(하단 3행 병합 -> start_row + 3)
                     maker_to_write = str(inst["maker"])
                     if inst.get("is_sub_channel"):
                         model_to_write = ""
@@ -2041,25 +2081,25 @@ elif should_run:
                         )
 
                     ws_curr.cell(row=start_row, column=3, value=maker_to_write)
-                    ws_curr.cell(row=start_row + 2, column=3, value=model_to_write)
+                    ws_curr.cell(row=start_row + 3, column=3, value=model_to_write)
 
                     # D열: 기기번호
                     ws_curr.cell(row=start_row, column=4, value=str(inst["serial"]))
 
-                    # E열: MAX / DIV
+                    # E열: MAX(상단 3행 병합) / DIV(하단 3행 병합 -> start_row + 3)
                     ws_curr.cell(row=start_row, column=5, value=str(inst["max_str"]))
-                    ws_curr.cell(row=start_row + 2, column=5, value=str(inst["div_str"]))
+                    ws_curr.cell(row=start_row + 3, column=5, value=str(inst["div_str"]))
 
                     # F열: 방식 / 구분 / 타입
                     ws_curr.cell(row=start_row, column=6, value=str(inst["gubun"]))
 
-                    # G열 & H열: 범위 및 측정결과
+                    # G열 & H열: 범위 및 측정결과 (신규 6행 슬롯 내 병합 구조 대응)
                     nom_preview_list = []
                     ind_preview_list = []
 
                     for p_idx, pt in enumerate(pts[:10]):
-                        target_r = start_row + p_idx
-                        if target_r > 65:
+                        target_r = start_row + PT_ROW_OFFSETS[p_idx]
+                        if target_r > max_row_limit:
                             break
 
                         if isinstance(pt["nom"], str):
@@ -2104,15 +2144,13 @@ elif should_run:
                         }
                     )
 
-                    current_global_slot += slots_for_inst
-
                 output_buffer = io.BytesIO()
                 wb_out.save(output_buffer)
                 output_buffer.seek(0)
                 wb_out.close()
 
                 safe_client = re.sub(r'[\/:*?"<>|() ]', "", str(global_client_name)) or "미상업체"
-                out_name = f"기록지_{safe_client}_총{len(uploaded_files)}건_({total_pages_needed}P).xlsx"
+                out_name = f"기록지({MAX_SLOTS_PER_PAGE}칸)_{safe_client}_총{len(uploaded_files)}건_({total_pages_needed}P).xlsx"
 
                 # ========================================================
                 # [결과 대시보드 및 실시간 미리보기 렌더링]
@@ -2121,9 +2159,9 @@ elif should_run:
                     st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
                     with st.container(border=True):
                         st.markdown(
-                            """
+                            f"""
                             <div class="section-header">
-                                <div class="section-title">✅ 기록지 변환 완료</div>
+                                <div class="section-title">✅ {MAX_SLOTS_PER_PAGE}칸 기록지 변환 완료</div>
                                 <span class="section-pill" style="background:#ECFDF5; color:#059669; border-color:#A7F3D0;">즉시 다운로드 가능</span>
                             </div>
                             """,
@@ -2136,7 +2174,7 @@ elif should_run:
                             str(global_client_name) if global_client_name else "미확인",
                         )
                         m_c2.metric("📑 처리된 성적서", f"{len(uploaded_files)} 건")
-                        m_c3.metric("🎯 사용 슬롯", f"{total_slots_needed} 칸")
+                        m_c3.metric("🎯 사용 슬롯", f"{total_slots_used} 칸 ({MAX_SLOTS_PER_PAGE}칸 양식)")
                         m_c4.metric("📄 생성 페이지", f"{total_pages_needed} 페이지")
 
                         st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
@@ -2162,4 +2200,4 @@ elif should_run:
 
 # ----------------- 하단 푸터 -----------------
 st.markdown("<div style='margin-top: 3rem;'></div>", unsafe_allow_html=True)
-st.caption("⚡ **KCS 딸깍 기록지 v6.0** | Crafted by **D** | Automated Calibration Record Generator")
+st.caption("⚡ **KCS 딸깍 기록지** | Crafted by **D** | Automated Calibration Record Generator")
