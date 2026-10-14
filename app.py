@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.1 (10칸/12칸 기록지 양식 선택 지원 / 신규 6행 슬롯 병합 구조 대응 / UI 문구 리뉴얼)
+버전: v6.2 (다운로드 버튼 위치 최적화 - 스크롤 없이 즉시 다운로드 가능하도록 UI 개선)
 """
 
 import io
@@ -757,6 +757,9 @@ with col_left:
             else:
                 manual_run = st.button("⚡ 기록지 변환 시작", use_container_width=True, type="primary")
             st.markdown("</div>", unsafe_allow_html=True)
+            
+        # 다운로드 버튼이 렌더링될 자리 (스크롤 없이 바로 클릭 가능한 위치)
+        download_placeholder = st.empty()
 
 bottom_result_container = st.container()
 
@@ -2151,6 +2154,20 @@ elif should_run:
 
                 safe_client = re.sub(r'[\/:*?"<>|() ]', "", str(global_client_name)) or "미상업체"
                 out_name = f"기록지({MAX_SLOTS_PER_PAGE}칸)_{safe_client}_총{len(uploaded_files)}건_({total_pages_needed}P).xlsx"
+                
+                # ========================================================
+                # 다운로드 버튼 렌더링 (좌측 컨트롤 패널 영역으로 이동)
+                # ========================================================
+                with download_placeholder:
+                    st.markdown("<div style='margin-top: 0.85rem;'></div>", unsafe_allow_html=True)
+                    st.download_button(
+                        label=f"📥 [딸깍] {out_name} 다운로드",
+                        data=output_buffer,
+                        file_name=out_name,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                        use_container_width=True,
+                    )
 
                 # ========================================================
                 # [결과 대시보드 및 실시간 미리보기 렌더링]
@@ -2162,7 +2179,6 @@ elif should_run:
                             f"""
                             <div class="section-header">
                                 <div class="section-title">✅ {MAX_SLOTS_PER_PAGE}칸 기록지 변환 완료</div>
-                                <span class="section-pill" style="background:#ECFDF5; color:#059669; border-color:#A7F3D0;">즉시 다운로드 가능</span>
                             </div>
                             """,
                             unsafe_allow_html=True,
@@ -2178,15 +2194,7 @@ elif should_run:
                         m_c4.metric("📄 생성 페이지", f"{total_pages_needed} 페이지")
 
                         st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
-                        st.download_button(
-                            label=f"📥 [딸깍] {out_name} 다운로드",
-                            data=output_buffer,
-                            file_name=out_name,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary",
-                            use_container_width=True,
-                        )
-
+                        
                         with st.expander("🔍 추출 데이터 실시간 미리보기 (클릭하여 검수)", expanded=True):
                             df_preview = pd.DataFrame(preview_rows)
                             st.dataframe(
