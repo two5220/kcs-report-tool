@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.3 (힘 시험기 지시하중/다이얼평균 동적 열 추적 및 데이터 매핑 최적화)
+버전: v6.3.4 (힘 시험기 동적 열 추적 인덱스 상실 버그 픽스 및 UI 문구 복구)
 """
 
 import io
@@ -586,6 +586,27 @@ def safe_load_workbook(uploaded_file, data_only=True):
 # ==============================================================================
 # [상단 히어로 헤더 & 메인 레이아웃]
 # ==============================================================================
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-title">
+            KCS <span class="hero-title-accent">딸깍 기록지</span>
+        </div>
+        <div class="hero-desc">
+            교정 성적서 엑셀 파일을 업로드하면 즉시 자동 변환합니다.<br>
+            ⚠️ 오류가 있을 수 있으니 최종 확인을 권장드리며, 기능 업데이트 및 오류 수정은 <b>D</b>에게 요청해 주세요.
+        </div>
+        <div class="badge-wrap">
+            <div class="chip chip-f"><span class="chip-code">FXX</span>힘 시험기</div>
+            <div class="chip chip-m"><span class="chip-code">MXX</span>전기식·호퍼 저울</div>
+            <div class="chip chip-t"><span class="chip-code">TXX</span>온도 지시·기록계</div>
+            <div class="chip chip-p"><span class="chip-code">PXX</span>압력계·차압계</div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 col_left, col_right = st.columns([1.45, 1.0], gap="large")
 
 with col_right:
@@ -676,7 +697,7 @@ with col_right:
             """
             <div class="info-callout">
                 <span>💡</span>
-                <span>현장에서 수기로 직접 기입해야 할 때 해당 비우기 옵션을 사용하세요.</span>
+                <span>현장에서 직접 기입해야 할 때 해당 비우기 옵션을 사용하세요.</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -944,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.3 동적 열 추적 강화)
+                    # [기기 판별 B] 힘 시험기 (v6.3.4 동적 열 추적 인덱스 버그 픽스)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1059,54 +1080,54 @@ elif should_run:
                                     ind_col = 28
                                     is_dial_type = False
 
-                                    # 지시하중 및 다이얼 평균(측정결과) 열 동적 탐색 로직 최적화
+                                    # 지시하중 및 다이얼 평균(측정결과) 열 동적 탐색 로직 최적화 (버그 픽스)
                                     for dr in range(r + 1, min(r + 8, len(rows))):
                                         dr_str = " ".join([str(c or "") for c in rows[dr]])
                                         if "지시하중" in dr_str or "기준하중" in dr_str or "다이얼" in dr_str:
                                             is_dial_type = "다이얼" in dr_str
                                             
-                                            # 범위(명목값) 열 탐색: 1순위 지시하중 -> 2순위 기준하중
                                             temp_nom = None
+                                            temp_ind = None
+
+                                            # 1. 엑셀의 원래 열 번호를 유지하면서 키워드 찾기
                                             for search_r in range(dr, min(dr + 3, len(rows))):
-                                                r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
-                                                for c_idx, c_str in enumerate(r_cln):
-                                                    if "지시하중" in c_str:
-                                                        temp_nom = c_idx
-                                                        break
-                                                if temp_nom is not None:
-                                                    break
-                                            
-                                            # 지시하중이 없는 다이얼 성적서 등의 경우 폴백
+                                                for c_idx, c_val in enumerate(rows[search_r]):
+                                                    if c_val is None:
+                                                        continue
+                                                    c_str = str(c_val).replace(" ", "").replace("\n", "")
+                                                    
+                                                    # 범위(명목값) 1순위 타겟팅
+                                                    if temp_nom is None:
+                                                        if is_dial_type and "기준하중" in c_str:
+                                                            temp_nom = c_idx
+                                                        elif not is_dial_type and "지시하중" in c_str:
+                                                            temp_nom = c_idx
+                                                            
+                                                    # 측정결과(지시값/오차) 1순위 타겟팅
+                                                    if temp_ind is None:
+                                                        if is_dial_type:
+                                                            if "다이얼평균" in c_str:
+                                                                temp_ind = c_idx
+                                                            elif "지시값" in c_str and temp_ind is None:
+                                                                temp_ind = c_idx # 다이얼평균이 없으면 지시값으로 대체
+                                                        elif not is_dial_type and "상대지시오차" in c_str:
+                                                            temp_ind = c_idx
+
+                                            # 2. 범위(명목값) 2순위 폴백 (일반 시험기인데 '지시하중'이 없는 경우 '기준하중' 사용)
                                             if temp_nom is None:
                                                 for search_r in range(dr, min(dr + 3, len(rows))):
-                                                    r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
-                                                    for c_idx, c_str in enumerate(r_cln):
+                                                    for c_idx, c_val in enumerate(rows[search_r]):
+                                                        if c_val is None:
+                                                            continue
+                                                        c_str = str(c_val).replace(" ", "").replace("\n", "")
                                                         if "기준하중" in c_str:
                                                             temp_nom = c_idx
                                                             break
                                                     if temp_nom is not None:
                                                         break
                                             
-                                            if temp_nom is not None:
-                                                nom_col = temp_nom
-                                                
-                                            # 측정결과(지시/평균값) 열 탐색: 다이얼 유무에 따라 분기
-                                            temp_ind = None
-                                            for search_r in range(dr, min(dr + 3, len(rows))):
-                                                r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
-                                                for c_idx, c_str in enumerate(r_cln):
-                                                    if is_dial_type and ("다이얼평균" in c_str or "지시값" in c_str):
-                                                        temp_ind = c_idx
-                                                        if "다이얼평균" in c_str:  # 다이얼 평균 최우선 매핑
-                                                            break 
-                                                    elif not is_dial_type and "상대지시오차" in c_str:
-                                                        temp_ind = c_idx
-                                                        break
-                                                if temp_ind is not None:
-                                                    break
-                                                    
-                                            if temp_ind is not None:
-                                                ind_col = temp_ind
+                                            if temp_nom is not None: nom_col = temp_nom
+                                            if temp_ind is not None: ind_col = temp_ind
                                                 
                                             # 단위 추출
                                             if dr + 1 < len(rows):
@@ -1236,7 +1257,7 @@ elif should_run:
                         k in raw_device_name for k in ["온도", "기록계", "조절계"]
                     ):
                         res_sheets = [
-                            s for s in wb_src.sheetnames if "교정결과" in s and "영문" not in s
+                            s for s in wb_src.sheetnames if s.startswith("교정결과") and "영문" not in s
                         ]
 
                         def _sort_sheet_key(s):
