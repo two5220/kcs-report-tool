@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.4 (힘 시험기 동적 열 추적 인덱스 상실 버그 픽스 및 UI 문구 복구)
+버전: v6.3.5 (F시험기 소수점 원본 포맷팅 유지 / 다이얼평균 무한소수 방지 / 하단 주석 오작동 차단)
 """
 
 import io
@@ -586,27 +586,6 @@ def safe_load_workbook(uploaded_file, data_only=True):
 # ==============================================================================
 # [상단 히어로 헤더 & 메인 레이아웃]
 # ==============================================================================
-st.markdown(
-    """
-    <div class="hero-card">
-        <div class="hero-title">
-            KCS <span class="hero-title-accent">딸깍 기록지</span>
-        </div>
-        <div class="hero-desc">
-            교정 성적서 엑셀 파일을 업로드하면 즉시 자동 변환합니다.<br>
-            ⚠️ 오류가 있을 수 있으니 최종 확인을 권장드리며, 기능 업데이트 및 오류 수정은 <b>D</b>에게 요청해 주세요.
-        </div>
-        <div class="badge-wrap">
-            <div class="chip chip-f"><span class="chip-code">FXX</span>힘 시험기</div>
-            <div class="chip chip-m"><span class="chip-code">MXX</span>전기식·호퍼 저울</div>
-            <div class="chip chip-t"><span class="chip-code">TXX</span>온도 지시·기록계</div>
-            <div class="chip chip-p"><span class="chip-code">PXX</span>압력계·차압계</div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 col_left, col_right = st.columns([1.45, 1.0], gap="large")
 
 with col_right:
@@ -965,7 +944,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.4 동적 열 추적 인덱스 버그 픽스)
+                    # [기기 판별 B] 힘 시험기 (v6.3.5)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1080,7 +1059,6 @@ elif should_run:
                                     ind_col = 28
                                     is_dial_type = False
 
-                                    # 지시하중 및 다이얼 평균(측정결과) 열 동적 탐색 로직 최적화 (버그 픽스)
                                     for dr in range(r + 1, min(r + 8, len(rows))):
                                         dr_str = " ".join([str(c or "") for c in rows[dr]])
                                         if "지시하중" in dr_str or "기준하중" in dr_str or "다이얼" in dr_str:
@@ -1089,31 +1067,27 @@ elif should_run:
                                             temp_nom = None
                                             temp_ind = None
 
-                                            # 1. 엑셀의 원래 열 번호를 유지하면서 키워드 찾기
                                             for search_r in range(dr, min(dr + 3, len(rows))):
                                                 for c_idx, c_val in enumerate(rows[search_r]):
                                                     if c_val is None:
                                                         continue
                                                     c_str = str(c_val).replace(" ", "").replace("\n", "")
                                                     
-                                                    # 범위(명목값) 1순위 타겟팅
                                                     if temp_nom is None:
                                                         if is_dial_type and "기준하중" in c_str:
                                                             temp_nom = c_idx
                                                         elif not is_dial_type and "지시하중" in c_str:
                                                             temp_nom = c_idx
                                                             
-                                                    # 측정결과(지시값/오차) 1순위 타겟팅
                                                     if temp_ind is None:
                                                         if is_dial_type:
                                                             if "다이얼평균" in c_str:
                                                                 temp_ind = c_idx
                                                             elif "지시값" in c_str and temp_ind is None:
-                                                                temp_ind = c_idx # 다이얼평균이 없으면 지시값으로 대체
+                                                                temp_ind = c_idx
                                                         elif not is_dial_type and "상대지시오차" in c_str:
                                                             temp_ind = c_idx
 
-                                            # 2. 범위(명목값) 2순위 폴백 (일반 시험기인데 '지시하중'이 없는 경우 '기준하중' 사용)
                                             if temp_nom is None:
                                                 for search_r in range(dr, min(dr + 3, len(rows))):
                                                     for c_idx, c_val in enumerate(rows[search_r]):
@@ -1129,7 +1103,6 @@ elif should_run:
                                             if temp_nom is not None: nom_col = temp_nom
                                             if temp_ind is not None: ind_col = temp_ind
                                                 
-                                            # 단위 추출
                                             if dr + 1 < len(rows):
                                                 u_str = " ".join([str(c or "") for c in rows[dr + 1]])
                                                 m_u = re.search(r"\(([A-Za-z]+)\)", u_str)
@@ -1146,37 +1119,51 @@ elif should_run:
                                         while curr_r < len(rows):
                                             crow = rows[curr_r]
                                             crow_str = " ".join([str(c or "") for c in crow])
+                                            
+                                            # [추가된 픽스] 표 최하단 주석 및 기타 불필요한 영역 침범 차단
                                             if any(
                                                 k in crow_str
                                                 for k in [
-                                                    "상대영점",
-                                                    "분해능",
-                                                    "상대측정불확도",
-                                                    "압 축 교 정",
-                                                    "인 장 교 정",
-                                                    "KCS-QP",
+                                                    "상대영점", "분해능", "상대측정불확도", "압 축 교 정",
+                                                    "인 장 교 정", "KCS-QP", "신뢰수준", "눈금수",
+                                                    "다이얼 게이지", "추정하였음", "끝."
                                                 ]
                                             ):
                                                 break
+                                                
                                             nom = crow[nom_col] if len(crow) > nom_col else None
                                             err = crow[ind_col] if len(crow) > ind_col else None
                                             
-                                            if nom is not None:
+                                            # [추가된 픽스] '1.', '2.' 과 같이 하단 목록 표기 오작동 필터링 (범위 1.0, 2.0 방지)
+                                            if isinstance(nom, str) and re.match(r"^\d+\.$", str(nom).strip()):
+                                                break
+                                            
+                                            if nom is not None and str(nom).strip() != "":
                                                 try:
                                                     f_nom = float(str(nom).replace(",", "").strip())
-                                                    # 유효한 포인트인지 필터링
-                                                    if f_nom > 0:
+                                                    if f_nom >= 0:
                                                         err_str = "-"
-                                                        if err is not None and str(err).strip() != "-":
-                                                            f_err = float(str(err).replace(",", "").strip())
+                                                        
+                                                        # [소수점 원본 포맷팅 유지 픽스]
+                                                        # 엑셀 셀 원본의 표시 형식을 직접 가져옴
+                                                        nom_cell = ws.cell(row=curr_r + 1, column=nom_col + 1)
+                                                        nom_str_formatted = get_formatted_value(nom_cell)
+                                                        if nom_str_formatted is None:
+                                                            nom_str_formatted = str(f_nom)
                                                             
+                                                        if err is not None and str(err).strip() != "-":
                                                             if is_dial_type:
-                                                                err_str = format_meaningful_decimals(f_err)
+                                                                ind_cell = ws.cell(row=curr_r + 1, column=ind_col + 1)
+                                                                err_str = get_formatted_value(ind_cell)
+                                                                if err_str is None:
+                                                                    f_err = float(str(err).replace(",", "").strip())
+                                                                    err_str = format_meaningful_decimals(f_err)
                                                             else:
+                                                                f_err = float(str(err).replace(",", "").strip())
                                                                 err_str = f"{f_err:+.2f} %"
                                                                 
                                                         pts.append(
-                                                            {"nom": f_nom, "ind": err_str, "sub": "-"}
+                                                            {"nom": nom_str_formatted, "ind": err_str, "sub": "-"}
                                                         )
                                                 except Exception:
                                                     pass
@@ -1193,7 +1180,14 @@ elif should_run:
                                                     res_val_str = f"{res_val_str} {unit_str}"
                                                 break
 
-                                        max_nom = max([p["nom"] for p in pts]) if pts else 0
+                                        max_nom = max([p["nom"] for p in pts if isinstance(p["nom"], (int, float))]) if pts else 0
+                                        if max_nom == 0:
+                                            # 문자열로 변환된 값에서 max 찾기
+                                            try:
+                                                max_nom = max([float(str(p["nom"]).replace(",", "")) for p in pts])
+                                            except:
+                                                pass
+                                                
                                         stages.append(
                                             {
                                                 "method": method,
@@ -1241,9 +1235,7 @@ elif should_run:
                                     "serial": serial_no,
                                     "max_str": final_max_str,
                                     "div_str": final_div_str,
-                                    "res_dec": get_decimal_places(stg["pts"][0]["nom"])
-                                    if stg["pts"]
-                                    else 0,
+                                    "res_dec": 0,
                                     "gubun": stg["method"],
                                     "pts": stg["pts"],
                                     "is_sub_channel": s_idx > 0,
