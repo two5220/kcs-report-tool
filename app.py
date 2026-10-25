@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.1 (맞춤 설정 UI 최적화 / 기본값 변경 및 레이아웃 재배치)
+버전: v6.3.2 (F 시험기 다이얼/mm 분해능 예외 처리 및 다단 표기 간소화 업데이트)
 """
 
 import io
@@ -993,7 +993,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기
+                    # [기기 판별 B] 힘 시험기 (v6.3.2 업데이트 반영)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1060,7 +1060,7 @@ elif should_run:
                                             cap_val = v
                                             for u_c in r_vals[c_i + 1 : c_i + 8]:
                                                 if u_c and any(
-                                                    u in str(u_c) for u in ["kN", "N", "tf", "kgf"]
+                                                    u in str(u_c) for u in ["kN", "N", "tf", "kgf", "mm"]
                                                 ):
                                                     cap_unit = (
                                                         str(u_c).replace("(", "").replace(")", "").strip()
@@ -1072,8 +1072,9 @@ elif should_run:
                                         if v is not None and isinstance(v, (int, float)) and v > 0:
                                             div_val = v
                                             for u_c in r_vals[c_i + 1 : c_i + 8]:
+                                                # UPDATE 1: 분해능 단위에 mm 추가 허용
                                                 if u_c and any(
-                                                    u in str(u_c) for u in ["kN", "N", "tf", "kgf"]
+                                                    u in str(u_c) for u in ["kN", "N", "tf", "kgf", "mm"]
                                                 ):
                                                     div_unit = (
                                                         str(u_c).replace("(", "").replace(")", "").strip()
@@ -1103,10 +1104,28 @@ elif should_run:
                                     method = "인장" if ("인장" in row_str or "인 장" in row_str) else "압축"
                                     start_data_r = -1
                                     unit_str = "kN"
+                                    
+                                    nom_col = 3
+                                    ind_col = 28
+                                    is_dial_type = False
 
-                                    for dr in range(r + 1, min(r + 6, len(rows))):
+                                    # UPDATE 2: 지시하중 외에 다이얼 평균(mm) 동적 열 찾기 로직 추가
+                                    for dr in range(r + 1, min(r + 8, len(rows))):
                                         dr_str = " ".join([str(c or "") for c in rows[dr]])
-                                        if "지시하중" in dr_str:
+                                        if "지시하중" in dr_str or "다이얼" in dr_str:
+                                            is_dial_type = "다이얼" in dr_str
+                                            
+                                            # 찾은 헤더행부터 하위 2줄까지 열(Column) 동적 탐색
+                                            for search_r in range(dr, min(dr + 3, len(rows))):
+                                                for c_idx, c_val in enumerate(rows[search_r]):
+                                                    c_str = str(c_val or "").replace(" ", "").replace("\n", "")
+                                                    if "기준하중" in c_str:
+                                                        nom_col = c_idx
+                                                    elif ("다이얼평균" in c_str or "지시값" in c_str) and is_dial_type:
+                                                        ind_col = c_idx
+                                                    elif "상대지시오차" in c_str and not is_dial_type:
+                                                        ind_col = c_idx
+
                                             if dr + 1 < len(rows):
                                                 u_str = " ".join([str(c or "") for c in rows[dr + 1]])
                                                 m_u = re.search(r"\(([A-Za-z]+)\)", u_str)
@@ -1134,16 +1153,22 @@ elif should_run:
                                                 ]
                                             ):
                                                 break
-                                            nom = crow[3] if len(crow) > 3 else None
-                                            err = crow[28] if len(crow) > 28 else None
+                                            nom = crow[nom_col] if len(crow) > nom_col else None
+                                            err = crow[ind_col] if len(crow) > ind_col else None
                                             if nom is not None:
                                                 try:
                                                     f_nom = float(str(nom).replace(",", "").strip())
                                                     if f_nom > 0:
                                                         err_str = "-"
                                                         if err is not None and str(err).strip() != "-":
-                                                            f_err = float(err)
-                                                            err_str = f"{f_err:+.2f} %"
+                                                            f_err = float(str(err).replace(",", "").strip())
+                                                            
+                                                            # 다이얼 방식인 경우 % 오차가 아닌 지시값 자체를 가져옵니다.
+                                                            if is_dial_type:
+                                                                err_str = format_meaningful_decimals(f_err)
+                                                            else:
+                                                                err_str = f"{f_err:+.2f} %"
+                                                                
                                                         pts.append(
                                                             {"nom": f_nom, "ind": err_str, "sub": "-"}
                                                         )
@@ -1154,7 +1179,7 @@ elif should_run:
                                         for sr in range(curr_r, min(curr_r + 6, len(rows))):
                                             sr_str = " ".join([str(c or "") for c in rows[sr]])
                                             m_res = re.search(
-                                                r"분해능\s*:\s*([\d\.]+\s*[A-Za-z]*)", sr_str
+                                                r"분해능\s*:\s*([\d\.]+\s*[A-Za-z]*)" , sr_str
                                             )
                                             if m_res:
                                                 res_val_str = m_res.group(1).strip()
@@ -1180,9 +1205,10 @@ elif should_run:
 
                         total_stages = len(stages)
                         for s_idx, stg in enumerate(stages):
+                            # UPDATE 3: 총 단수만 표시 되게끔 로직 수정 (예: <1/4단> -> <4단>)
                             if total_stages > 1:
                                 dev_disp = (
-                                    f"{raw_device_name}\n<{s_idx + 1}단/{total_stages}단>"
+                                    f"{raw_device_name}\n<{total_stages}단>"
                                     if s_idx == 0
                                     else ""
                                 )
@@ -1498,7 +1524,7 @@ elif should_run:
                                     val_f = clean_text(cs.split(":", 1)[1])
                                     if val_f:
                                         p_capacity = val_f
-                                elif (
+                                    elif (
                                     ("기기번호" in cs or "기   기   번   호" in cs)
                                     and ":" in cs
                                     and not p_serial
