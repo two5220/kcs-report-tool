@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.6 (F시험기 max() 빈 배열 에러 픽스 및 상단 헤더 UI 복구)
+버전: v6.3.7 (F시험기 영점(0) 명목값 추출 생략 처리)
 """
 
 import io
@@ -965,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.6 max() 에러 픽스)
+                    # [기기 판별 B] 힘 시험기 (v6.3.7)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1141,7 +1141,6 @@ elif should_run:
                                             crow = rows[curr_r]
                                             crow_str = " ".join([str(c or "") for c in crow])
                                             
-                                            # 하단 주석 및 방해 데이터 방어
                                             if any(
                                                 k in crow_str
                                                 for k in [
@@ -1155,17 +1154,17 @@ elif should_run:
                                             nom = crow[nom_col] if len(crow) > nom_col else None
                                             err = crow[ind_col] if len(crow) > ind_col else None
                                             
-                                            # '1.', '2.' 등 주석 문자열 추출 오작동 방어
                                             if isinstance(nom, str) and re.match(r"^\d+\.$", str(nom).strip()):
                                                 break
                                             
                                             if nom is not None and str(nom).strip() != "":
                                                 try:
                                                     f_nom = float(str(nom).replace(",", "").strip())
-                                                    if f_nom >= 0:
+                                                    
+                                                    # [업데이트 v6.3.7] 영점(0) 값 무조건 생략
+                                                    if f_nom > 0:
                                                         err_str = "-"
                                                         
-                                                        # 소수점 원본 포맷팅 추출
                                                         nom_cell = ws.cell(row=curr_r + 1, column=nom_col + 1)
                                                         nom_str_formatted = get_formatted_value(nom_cell)
                                                         if nom_str_formatted is None:
@@ -1200,7 +1199,6 @@ elif should_run:
                                                     res_val_str = f"{res_val_str} {unit_str}"
                                                 break
 
-                                        # max() 빈 배열 에러 방어 로직 추가
                                         max_nom = 0
                                         if pts:
                                             valid_noms = []
