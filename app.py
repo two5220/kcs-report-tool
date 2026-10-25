@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.5 (F시험기 소수점 원본 포맷팅 유지 / 다이얼평균 무한소수 방지 / 하단 주석 오작동 차단)
+버전: v6.3.6 (F시험기 max() 빈 배열 에러 픽스 및 상단 헤더 UI 복구)
 """
 
 import io
@@ -586,6 +586,27 @@ def safe_load_workbook(uploaded_file, data_only=True):
 # ==============================================================================
 # [상단 히어로 헤더 & 메인 레이아웃]
 # ==============================================================================
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-title">
+            KCS <span class="hero-title-accent">딸깍 기록지</span>
+        </div>
+        <div class="hero-desc">
+            교정 성적서 엑셀 파일을 업로드하면 즉시 자동 변환합니다.<br>
+            ⚠️ 오류가 있을 수 있으니 최종 확인을 권장드리며, 기능 업데이트 및 오류 수정은 <b>D</b>에게 요청해 주세요.
+        </div>
+        <div class="badge-wrap">
+            <div class="chip chip-f"><span class="chip-code">FXX</span>힘 시험기</div>
+            <div class="chip chip-m"><span class="chip-code">MXX</span>전기식·호퍼 저울</div>
+            <div class="chip chip-t"><span class="chip-code">TXX</span>온도 지시·기록계</div>
+            <div class="chip chip-p"><span class="chip-code">PXX</span>압력계·차압계</div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 col_left, col_right = st.columns([1.45, 1.0], gap="large")
 
 with col_right:
@@ -944,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.5)
+                    # [기기 판별 B] 힘 시험기 (v6.3.6 max() 에러 픽스)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1120,7 +1141,7 @@ elif should_run:
                                             crow = rows[curr_r]
                                             crow_str = " ".join([str(c or "") for c in crow])
                                             
-                                            # [추가된 픽스] 표 최하단 주석 및 기타 불필요한 영역 침범 차단
+                                            # 하단 주석 및 방해 데이터 방어
                                             if any(
                                                 k in crow_str
                                                 for k in [
@@ -1134,7 +1155,7 @@ elif should_run:
                                             nom = crow[nom_col] if len(crow) > nom_col else None
                                             err = crow[ind_col] if len(crow) > ind_col else None
                                             
-                                            # [추가된 픽스] '1.', '2.' 과 같이 하단 목록 표기 오작동 필터링 (범위 1.0, 2.0 방지)
+                                            # '1.', '2.' 등 주석 문자열 추출 오작동 방어
                                             if isinstance(nom, str) and re.match(r"^\d+\.$", str(nom).strip()):
                                                 break
                                             
@@ -1144,8 +1165,7 @@ elif should_run:
                                                     if f_nom >= 0:
                                                         err_str = "-"
                                                         
-                                                        # [소수점 원본 포맷팅 유지 픽스]
-                                                        # 엑셀 셀 원본의 표시 형식을 직접 가져옴
+                                                        # 소수점 원본 포맷팅 추출
                                                         nom_cell = ws.cell(row=curr_r + 1, column=nom_col + 1)
                                                         nom_str_formatted = get_formatted_value(nom_cell)
                                                         if nom_str_formatted is None:
@@ -1180,13 +1200,17 @@ elif should_run:
                                                     res_val_str = f"{res_val_str} {unit_str}"
                                                 break
 
-                                        max_nom = max([p["nom"] for p in pts if isinstance(p["nom"], (int, float))]) if pts else 0
-                                        if max_nom == 0:
-                                            # 문자열로 변환된 값에서 max 찾기
-                                            try:
-                                                max_nom = max([float(str(p["nom"]).replace(",", "")) for p in pts])
-                                            except:
-                                                pass
+                                        # max() 빈 배열 에러 방어 로직 추가
+                                        max_nom = 0
+                                        if pts:
+                                            valid_noms = []
+                                            for p in pts:
+                                                try:
+                                                    valid_noms.append(float(str(p["nom"]).replace(",", "")))
+                                                except (ValueError, TypeError):
+                                                    pass
+                                            if valid_noms:
+                                                max_nom = max(valid_noms)
                                                 
                                         stages.append(
                                             {
@@ -2034,7 +2058,7 @@ elif should_run:
                         all_instruments.append(inst)
 
                 except Exception as file_err:
-                    error_files.append(f"{file.name} ({file_err})")
+                    error_files.append(f"{file.name} ({type(file_err).__name__}: {file_err})")
                 finally:
                     if wb_src is not None:
                         try:
