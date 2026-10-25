@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.2 (F 시험기 다이얼/mm 분해능 예외 처리 및 다단 표기 간소화 업데이트)
+버전: v6.3.2 (F 시험기 다이얼/mm 분해능 예외 처리 및 다단 표기 간소화 업데이트 + 들여쓰기 픽스)
 """
 
 import io
@@ -1072,7 +1072,6 @@ elif should_run:
                                         if v is not None and isinstance(v, (int, float)) and v > 0:
                                             div_val = v
                                             for u_c in r_vals[c_i + 1 : c_i + 8]:
-                                                # UPDATE 1: 분해능 단위에 mm 추가 허용
                                                 if u_c and any(
                                                     u in str(u_c) for u in ["kN", "N", "tf", "kgf", "mm"]
                                                 ):
@@ -1109,13 +1108,11 @@ elif should_run:
                                     ind_col = 28
                                     is_dial_type = False
 
-                                    # UPDATE 2: 지시하중 외에 다이얼 평균(mm) 동적 열 찾기 로직 추가
                                     for dr in range(r + 1, min(r + 8, len(rows))):
                                         dr_str = " ".join([str(c or "") for c in rows[dr]])
                                         if "지시하중" in dr_str or "다이얼" in dr_str:
                                             is_dial_type = "다이얼" in dr_str
                                             
-                                            # 찾은 헤더행부터 하위 2줄까지 열(Column) 동적 탐색
                                             for search_r in range(dr, min(dr + 3, len(rows))):
                                                 for c_idx, c_val in enumerate(rows[search_r]):
                                                     c_str = str(c_val or "").replace(" ", "").replace("\n", "")
@@ -1163,7 +1160,6 @@ elif should_run:
                                                         if err is not None and str(err).strip() != "-":
                                                             f_err = float(str(err).replace(",", "").strip())
                                                             
-                                                            # 다이얼 방식인 경우 % 오차가 아닌 지시값 자체를 가져옵니다.
                                                             if is_dial_type:
                                                                 err_str = format_meaningful_decimals(f_err)
                                                             else:
@@ -1205,7 +1201,6 @@ elif should_run:
 
                         total_stages = len(stages)
                         for s_idx, stg in enumerate(stages):
-                            # UPDATE 3: 총 단수만 표시 되게끔 로직 수정 (예: <1/4단> -> <4단>)
                             if total_stages > 1:
                                 dev_disp = (
                                     f"{raw_device_name}\n<{total_stages}단>"
@@ -1524,7 +1519,7 @@ elif should_run:
                                     val_f = clean_text(cs.split(":", 1)[1])
                                     if val_f:
                                         p_capacity = val_f
-                                    elif (
+                                elif (
                                     ("기기번호" in cs or "기   기   번   호" in cs)
                                     and ":" in cs
                                     and not p_serial
