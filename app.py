@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.2 (F 시험기 다이얼/mm 분해능 예외 처리 및 다단 표기 간소화 업데이트 + 들여쓰기 픽스)
+버전: v6.3.3 (힘 시험기 지시하중/다이얼평균 동적 열 추적 및 데이터 매핑 최적화)
 """
 
 import io
@@ -182,7 +182,7 @@ st.markdown(
     }
 
     /* ----------------------------------------------------
-       파일 업로더 드롭존 & 3열 리스트 커스텀 (핵심 업데이트)
+       파일 업로더 드롭존 & 3열 리스트 커스텀 
        ---------------------------------------------------- */
     div[data-testid="stFileUploader"] {
         width: 100% !important;
@@ -193,7 +193,6 @@ st.markdown(
         display: none !important;
     }
     
-    /* 파일 하나라도 첨부시 드롭존 숨기기 (CSS4 :has 속성 활용) */
     div[data-testid="stFileUploader"]:has(ul[data-testid="stUploadedFileList"]) section {
         display: none !important;
     }
@@ -249,7 +248,6 @@ st.markdown(
         counter-increment: file-counter;
     }
     
-    /* 1~X 넘버링 배지 설정 */
     li[data-testid="stUploadedFile"]::before {
         content: counter(file-counter);
         position: absolute;
@@ -269,7 +267,6 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
     }
     
-    /* 엑셀 초록색 아이콘화 및 파일명 포맷팅 */
     div[data-testid="stUploadedFile"] svg {
         color: #10B981 !important;
         width: 1.5rem !important;
@@ -277,12 +274,10 @@ st.markdown(
         margin-right: 0.3rem !important;
     }
     
-    /* 용량 텍스트 숨기기 */
     div[data-testid="stUploadedFile"] small {
         display: none !important;
     }
     
-    /* 파일명 길이 제어 (확장자 가리기 효과 적용) */
     div[data-testid="stUploadedFile"] .stMarkdown {
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -292,7 +287,6 @@ st.markdown(
         font-weight: 600 !important;
     }
     
-    /* X 삭제 아이콘 50% 확대 */
     button[data-testid="stUploadedFileDelete"] {
         transform: scale(1.5) !important;
         margin-right: 0.2rem !important;
@@ -303,7 +297,6 @@ st.markdown(
         color: #DC2626 !important;
     }
 
-    /* 옵션 아이템 행 스타일 */
     .opt-row {
         display: flex;
         align-items: center;
@@ -339,7 +332,6 @@ st.markdown(
         margin: 0.5rem 0;
     }
 
-    /* 양식 선택 라디오 버튼 모던 스타일링 */
     div[data-testid="stRadio"] {
         margin-bottom: -0.6rem !important;
     }
@@ -375,7 +367,6 @@ st.markdown(
         align-items: flex-start;
     }
 
-    /* 액션 버튼 스타일링 */
     div.action-btn-del button {
         height: 50px !important;
         border: 1px solid #CBD5E1 !important;
@@ -408,7 +399,6 @@ st.markdown(
         box-shadow: none !important;
     }
 
-    /* 다운로드 버튼 강조 */
     div[data-testid="stDownloadButton"] button {
         height: 54px !important;
         border-radius: 14px !important;
@@ -439,9 +429,7 @@ if "uploader_key" not in st.session_state:
 if "sort_enabled" not in st.session_state:
     st.session_state["sort_enabled"] = False
 
-# 신규 기록지 양식(1슬롯 = 6행, 가운데 3~4번째 행 병합)에 맞춘 포인트별 행 오프셋
 PT_ROW_OFFSETS = [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]
-
 
 def clean_text(v):
     if v is None:
@@ -451,7 +439,6 @@ def clean_text(v):
     if s.startswith("="):
         return ""
     return s
-
 
 def get_decimal_places(val):
     if val is None or str(val).strip() in ("", "-"):
@@ -470,7 +457,6 @@ def get_decimal_places(val):
         pass
     return 0
 
-
 def format_number(val, decimals):
     if val is None or val == "" or val == "-":
         return "-"
@@ -482,7 +468,6 @@ def format_number(val, decimals):
     except Exception:
         return str(val).replace(",", "").strip()
 
-
 def format_meaningful_decimals(val):
     if val is None or str(val).strip() in ("", "-"):
         return "-"
@@ -493,7 +478,6 @@ def format_meaningful_decimals(val):
         return f"{f_val:.6f}".rstrip("0").rstrip(".")
     except Exception:
         return clean_text(val)
-
 
 def get_formatted_value(cell):
     if cell is None or cell.value is None or str(cell.value).strip() in ("", "-"):
@@ -512,7 +496,6 @@ def get_formatted_value(cell):
             val_str = format_meaningful_decimals(val)
     return val_str
 
-
 def format_sub_weight(val):
     if val is None or val == "" or val == "-":
         return "-"
@@ -521,13 +504,11 @@ def format_sub_weight(val):
     except Exception:
         return str(val).split(".")[0].replace(",", "").strip()
 
-
 def extract_set_count(text):
     if not text:
         return None
     m = re.search(r"(\d+)\s*조", str(text))
     return int(m.group(1)) if m else None
-
 
 def clean_sensor_type(val):
     if not val:
@@ -541,7 +522,6 @@ def clean_sensor_type(val):
     val = re.sub(r"\(\s+", "(", val)
     val = re.sub(r"\s+\)", ")", val)
     return val
-
 
 def format_capacity_and_resolution_robust(cap_raw, res_raw):
     c_str = clean_text(cap_raw)
@@ -595,7 +575,6 @@ def format_capacity_and_resolution_robust(cap_raw, res_raw):
             div_str = r_norm
     return max_str, div_str, is_dual
 
-
 def safe_load_workbook(uploaded_file, data_only=True):
     uploaded_file.seek(0)
     try:
@@ -604,31 +583,9 @@ def safe_load_workbook(uploaded_file, data_only=True):
         uploaded_file.seek(0)
         return openpyxl.load_workbook(uploaded_file, data_only=data_only, read_only=True)
 
-
 # ==============================================================================
 # [상단 히어로 헤더 & 메인 레이아웃]
 # ==============================================================================
-st.markdown(
-    """
-    <div class="hero-card">
-        <div class="hero-title">
-            KCS <span class="hero-title-accent">딸깍 기록지</span>
-        </div>
-        <div class="hero-desc">
-            교정 성적서 엑셀 파일을 업로드하면 즉시 자동 변환합니다.<br>
-            ⚠️ 변환 결과에 일부 차이가 있을 수 있으니 최종 확인을 권장드리며, 오류나 업데이트 문의는 <b>D</b>에게 전달해 주세요.
-        </div>
-        <div class="badge-wrap">
-            <div class="chip chip-f"><span class="chip-code">FXX</span>힘 시험기</div>
-            <div class="chip chip-m"><span class="chip-code">MXX</span>전기식·호퍼 저울</div>
-            <div class="chip chip-t"><span class="chip-code">TXX</span>온도 지시·기록계</div>
-            <div class="chip chip-p"><span class="chip-code">PXX</span>압력계·차압계</div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 col_left, col_right = st.columns([1.45, 1.0], gap="large")
 
 with col_right:
@@ -643,7 +600,6 @@ with col_right:
             unsafe_allow_html=True,
         )
 
-        # 1열로 텍스트와 라디오 버튼을 나란히 정렬하여 가시성 및 디자인 통일감 극대화
         c_ico_t, c_lbl_t, c_opt_t = st.columns([0.7, 2.0, 2.4])
         with c_ico_t:
             st.markdown('<div class="opt-icon-box" style="color: #2563EB;">📋</div>', unsafe_allow_html=True)
@@ -758,7 +714,6 @@ with col_left:
             
         with c_sort:
             st.markdown('<div class="action-btn-del">', unsafe_allow_html=True)
-            # 성적서 중간 번호 및 뒷번호 기준 오름차순 정렬 트리거 버튼
             if st.button("⬇️ 오름차순 정렬", use_container_width=True, help="성적서 번호 규칙에 따라 오름차순으로 정렬합니다."):
                 st.session_state["sort_enabled"] = True
                 st.rerun()
@@ -772,7 +727,6 @@ with col_left:
                 manual_run = st.button("⚡ 기록지 변환 시작", use_container_width=True, type="primary")
             st.markdown("</div>", unsafe_allow_html=True)
             
-        # 다운로드 버튼이 렌더링될 자리 (스크롤 없이 바로 클릭 가능한 위치)
         download_placeholder = st.empty()
 
 bottom_result_container = st.container()
@@ -781,10 +735,8 @@ bottom_result_container = st.container()
 # [실행부: 엑셀 파싱 및 기록지 생성 로직]
 # ==============================================================================
 
-# 정렬 활성화 시 uploaded_files 내부 리스트 재정렬 처리
 if uploaded_files and st.session_state.get("sort_enabled", False):
     def sort_key(file_obj):
-        # 정규식 패턴: 성적서 번호 5자리와 마지막 3자리(000)를 추출하여 키로 사용
         m = re.search(r"-(\d{5})-(\d{3})", file_obj.name)
         if m:
             return (m.group(1), int(m.group(2)))
@@ -872,7 +824,6 @@ elif should_run:
                             if total_sets is None and ("측정범위" in row_str or "형식·모델" in row_str):
                                 total_sets = extract_set_count(row[6] if len(row) > 6 else "")
 
-                    # 성적서 번호 폴백 탐색
                     if not cert_no:
                         for sname in wb_src.sheetnames:
                             ws_temp = wb_src[sname]
@@ -993,7 +944,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.2 업데이트 반영)
+                    # [기기 판별 B] 힘 시험기 (v6.3.3 동적 열 추적 강화)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1108,26 +1059,62 @@ elif should_run:
                                     ind_col = 28
                                     is_dial_type = False
 
+                                    # 지시하중 및 다이얼 평균(측정결과) 열 동적 탐색 로직 최적화
                                     for dr in range(r + 1, min(r + 8, len(rows))):
                                         dr_str = " ".join([str(c or "") for c in rows[dr]])
-                                        if "지시하중" in dr_str or "다이얼" in dr_str:
+                                        if "지시하중" in dr_str or "기준하중" in dr_str or "다이얼" in dr_str:
                                             is_dial_type = "다이얼" in dr_str
                                             
+                                            # 범위(명목값) 열 탐색: 1순위 지시하중 -> 2순위 기준하중
+                                            temp_nom = None
                                             for search_r in range(dr, min(dr + 3, len(rows))):
-                                                for c_idx, c_val in enumerate(rows[search_r]):
-                                                    c_str = str(c_val or "").replace(" ", "").replace("\n", "")
-                                                    if "기준하중" in c_str:
-                                                        nom_col = c_idx
-                                                    elif ("다이얼평균" in c_str or "지시값" in c_str) and is_dial_type:
-                                                        ind_col = c_idx
-                                                    elif "상대지시오차" in c_str and not is_dial_type:
-                                                        ind_col = c_idx
-
+                                                r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
+                                                for c_idx, c_str in enumerate(r_cln):
+                                                    if "지시하중" in c_str:
+                                                        temp_nom = c_idx
+                                                        break
+                                                if temp_nom is not None:
+                                                    break
+                                            
+                                            # 지시하중이 없는 다이얼 성적서 등의 경우 폴백
+                                            if temp_nom is None:
+                                                for search_r in range(dr, min(dr + 3, len(rows))):
+                                                    r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
+                                                    for c_idx, c_str in enumerate(r_cln):
+                                                        if "기준하중" in c_str:
+                                                            temp_nom = c_idx
+                                                            break
+                                                    if temp_nom is not None:
+                                                        break
+                                            
+                                            if temp_nom is not None:
+                                                nom_col = temp_nom
+                                                
+                                            # 측정결과(지시/평균값) 열 탐색: 다이얼 유무에 따라 분기
+                                            temp_ind = None
+                                            for search_r in range(dr, min(dr + 3, len(rows))):
+                                                r_cln = [str(x).replace(" ", "").replace("\n", "") for x in rows[search_r] if x is not None]
+                                                for c_idx, c_str in enumerate(r_cln):
+                                                    if is_dial_type and ("다이얼평균" in c_str or "지시값" in c_str):
+                                                        temp_ind = c_idx
+                                                        if "다이얼평균" in c_str:  # 다이얼 평균 최우선 매핑
+                                                            break 
+                                                    elif not is_dial_type and "상대지시오차" in c_str:
+                                                        temp_ind = c_idx
+                                                        break
+                                                if temp_ind is not None:
+                                                    break
+                                                    
+                                            if temp_ind is not None:
+                                                ind_col = temp_ind
+                                                
+                                            # 단위 추출
                                             if dr + 1 < len(rows):
                                                 u_str = " ".join([str(c or "") for c in rows[dr + 1]])
                                                 m_u = re.search(r"\(([A-Za-z]+)\)", u_str)
                                                 if m_u:
                                                     unit_str = m_u.group(1)
+                                                    
                                             start_data_r = dr + 2
                                             break
 
@@ -1152,9 +1139,11 @@ elif should_run:
                                                 break
                                             nom = crow[nom_col] if len(crow) > nom_col else None
                                             err = crow[ind_col] if len(crow) > ind_col else None
+                                            
                                             if nom is not None:
                                                 try:
                                                     f_nom = float(str(nom).replace(",", "").strip())
+                                                    # 유효한 포인트인지 필터링
                                                     if f_nom > 0:
                                                         err_str = "-"
                                                         if err is not None and str(err).strip() != "-":
@@ -1900,7 +1889,6 @@ elif should_run:
 
                         pts = []
 
-                        # 1순위: '기록지' 탭의 '2.2 직선성시험'에서 명목값(범위) 및 평균값(측정결과) 추출
                         if "기록지" in wb_src.sheetnames:
                             ws_rec = wb_src["기록지"]
                             nom_col = 2
@@ -1966,7 +1954,6 @@ elif should_run:
                                     if len(pts) >= 10:
                                         break
 
-                        # 2순위 폴백: 혹시라도 '기록지' 탭이 없는 특이 양식일 경우 '교정결과' 탭에서 서식 유지 추출
                         if not pts and "교정결과" in wb_src.sheetnames:
                             ws_res = wb_src["교정결과"]
                             start_r = 0
@@ -2048,7 +2035,6 @@ elif should_run:
                 )
 
             if all_instruments:
-                # 1. 각 기기별 페이지 및 슬롯 위치 사전 배정
                 placements = []
                 curr_slot = 0
                 total_slots_used = 0
@@ -2176,9 +2162,6 @@ elif should_run:
                 safe_client = re.sub(r'[\/:*?"<>|() ]', "", str(global_client_name)) or "미상업체"
                 out_name = f"기록지({MAX_SLOTS_PER_PAGE}칸)_{safe_client}_총{len(uploaded_files)}건_({total_pages_needed}P).xlsx"
                 
-                # ========================================================
-                # 다운로드 버튼 렌더링 (좌측 컨트롤 패널 영역으로 이동)
-                # ========================================================
                 with download_placeholder:
                     st.markdown("<div style='margin-top: 0.85rem;'></div>", unsafe_allow_html=True)
                     st.download_button(
@@ -2190,9 +2173,6 @@ elif should_run:
                         use_container_width=True,
                     )
 
-                # ========================================================
-                # [결과 대시보드 및 실시간 미리보기 렌더링]
-                # ========================================================
                 with bottom_result_container:
                     st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
                     with st.container(border=True):
@@ -2206,10 +2186,7 @@ elif should_run:
                         )
 
                         m_c1, m_c2, m_c3, m_c4 = st.columns(4, gap="small")
-                        m_c1.metric(
-                            "🏢 의뢰 업체명",
-                            str(global_client_name) if global_client_name else "미확인",
-                        )
+                        m_c1.metric("🏢 의뢰 업체명", str(global_client_name) if global_client_name else "미확인")
                         m_c2.metric("📑 처리된 성적서", f"{len(uploaded_files)} 건")
                         m_c3.metric("🎯 사용 슬롯", f"{total_slots_used} 칸 ({MAX_SLOTS_PER_PAGE}칸 양식)")
                         m_c4.metric("📄 생성 페이지", f"{total_pages_needed} 페이지")
@@ -2227,6 +2204,5 @@ elif should_run:
         except Exception as e:
             st.error(f"❌ 분석 중 예기치 않은 오류가 발생했습니다: {e}")
 
-# ----------------- 하단 푸터 -----------------
 st.markdown("<div style='margin-top: 3rem;'></div>", unsafe_allow_html=True)
 st.caption("⚡ **KCS 딸깍 기록지** | Crafted by **D** | Automated Calibration Record Generator")
