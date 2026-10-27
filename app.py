@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.7 (F시험기 영점(0) 명목값 추출 생략 처리)
+버전: v6.3.8 (T 온도기록계 다중 채널 인식 정규식 완화 및 E4 채널명 기입)
 """
 
 import io
@@ -965,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 (v6.3.7)
+                    # [기기 판별 B] 힘 시험기
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1160,8 +1160,6 @@ elif should_run:
                                             if nom is not None and str(nom).strip() != "":
                                                 try:
                                                     f_nom = float(str(nom).replace(",", "").strip())
-                                                    
-                                                    # [업데이트 v6.3.7] 영점(0) 값 무조건 생략
                                                     if f_nom > 0:
                                                         err_str = "-"
                                                         
@@ -1265,7 +1263,7 @@ elif should_run:
                             )
 
                     # ========================================================
-                    # [기기 판별 C] 온도 기록계 / 온도 지시계
+                    # [기기 판별 C] 온도 기록계 / 온도 지시계 (v6.3.8)
                     # ========================================================
                     elif fname.startswith("T") or any(
                         k in raw_device_name for k in ["온도", "기록계", "조절계"]
@@ -1320,9 +1318,10 @@ elif should_run:
                                 r_vals = rows_temp[r_i]
                                 r_str = " ".join([str(v or "") for v in r_vals if v is not None])
 
-                                m_ch = re.search(r"[\(（]\s*(CH\s*\d+)\s*[\)）]", r_str, re.IGNORECASE)
+                                # [수정] 괄호 안의 전체 텍스트(예: 벽체내부 CH 1)를 인식하도록 정규식 완화
+                                m_ch = re.search(r"[\(（](.*?CH\s*\d+.*?)[\)）]", r_str, re.IGNORECASE)
                                 if m_ch:
-                                    ch_label = m_ch.group(1).upper().replace(" ", "")
+                                    ch_label = m_ch.group(1).strip()
 
                                     indiv_serial = ""
                                     m_sn = re.search(r"기기번호\s*:\s*([^|\(,\n]+)", r_str)
@@ -1381,7 +1380,7 @@ elif should_run:
                                             ):
                                                 break
                                             if re.search(
-                                                r"[\(（]\s*CH\s*\d+\s*[\)）]", c_str, re.IGNORECASE
+                                                r"[\(（](.*?CH\s*\d+.*?)[\)）]", c_str, re.IGNORECASE
                                             ):
                                                 break
                                             if "온도교정" in c_str or "기기명" in c_str:
@@ -1485,7 +1484,9 @@ elif should_run:
                             clean_base_dev = raw_device_name.replace(
                                 "온도기록계", "온도 기록계"
                             ).replace("온도지시계", "온도 지시계")
-                            max_channel_str = f"<{ch['ch_label']}/{total_ch}CH>" if total_ch > 1 else ""
+                            
+                            # [수정] 성적서 기재 텍스트 그대로 살려 (벽체내부 CH 1) 형식으로 입력
+                            max_channel_str = f"({ch['ch_label']})" if ch['ch_label'] else ""
 
                             final_serial = ch["indiv_serial"] if ch["indiv_serial"] else serial_no
                             if not final_serial or final_serial == "교정결과 참조":
