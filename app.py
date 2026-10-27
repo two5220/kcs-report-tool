@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.8 (T 온도기록계 다중 채널 인식 정규식 완화 및 E4 채널명 기입)
+버전: v6.3.9 (다채널/다단 기기 제조사 및 기기번호 최초 1회만 출력되도록 공란 처리 적용)
 """
 
 import io
@@ -965,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기
+                    # [기기 판별 B] 힘 시험기 
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1263,7 +1263,7 @@ elif should_run:
                             )
 
                     # ========================================================
-                    # [기기 판별 C] 온도 기록계 / 온도 지시계 (v6.3.8)
+                    # [기기 판별 C] 온도 기록계 / 온도 지시계
                     # ========================================================
                     elif fname.startswith("T") or any(
                         k in raw_device_name for k in ["온도", "기록계", "조절계"]
@@ -1318,7 +1318,6 @@ elif should_run:
                                 r_vals = rows_temp[r_i]
                                 r_str = " ".join([str(v or "") for v in r_vals if v is not None])
 
-                                # [수정] 괄호 안의 전체 텍스트(예: 벽체내부 CH 1)를 인식하도록 정규식 완화
                                 m_ch = re.search(r"[\(（](.*?CH\s*\d+.*?)[\)）]", r_str, re.IGNORECASE)
                                 if m_ch:
                                     ch_label = m_ch.group(1).strip()
@@ -1484,8 +1483,6 @@ elif should_run:
                             clean_base_dev = raw_device_name.replace(
                                 "온도기록계", "온도 기록계"
                             ).replace("온도지시계", "온도 지시계")
-                            
-                            # [수정] 성적서 기재 텍스트 그대로 살려 (벽체내부 CH 1) 형식으로 입력
                             max_channel_str = f"({ch['ch_label']})" if ch['ch_label'] else ""
 
                             final_serial = ch["indiv_serial"] if ch["indiv_serial"] else serial_no
@@ -2130,15 +2127,20 @@ elif should_run:
                     cell_dev = ws_curr.cell(row=start_row, column=2, value=dev_name_to_write)
                     cell_dev.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-                    maker_to_write = str(inst["maker"])
+                    # [수정] 서브채널(2번째 채널)부터 제조사와 기기번호를 공란 처리
                     if inst.get("is_sub_channel"):
+                        maker_to_write = ""
                         model_to_write = ""
+                        serial_to_write = ""
                     else:
+                        maker_to_write = str(inst["maker"])
                         model_to_write = "" if inst["type_kind"] in ["압력계", "힘 시험기"] else str(inst["model"])
+                        serial_to_write = str(inst["serial"])
 
                     ws_curr.cell(row=start_row, column=3, value=maker_to_write)
                     ws_curr.cell(row=start_row + 3, column=3, value=model_to_write)
-                    ws_curr.cell(row=start_row, column=4, value=str(inst["serial"]))
+                    ws_curr.cell(row=start_row, column=4, value=serial_to_write)
+                    
                     ws_curr.cell(row=start_row, column=5, value=str(inst["max_str"]))
                     ws_curr.cell(row=start_row + 3, column=5, value=str(inst["div_str"]))
                     ws_curr.cell(row=start_row, column=6, value=str(inst["gubun"]))
@@ -2181,8 +2183,8 @@ elif should_run:
                             "No": inst["cert_file_no"] if inst["cert_file_no"] else "-",
                             "분류": inst["type_kind"],
                             "기기명": dev_name_to_write.replace("\n", " ") if dev_name_to_write else "(상동/서브채널)",
-                            "제조사": maker_to_write,
-                            "기기번호": inst["serial"],
+                            "제조사": maker_to_write if maker_to_write else "(상동)",
+                            "기기번호": serial_to_write if serial_to_write else "(상동)",
                             "MAX / DIV": f"{inst['max_str']} / {inst['div_str']}".strip(" /"),
                             "※(구분)": inst["gubun"] if inst["gubun"] else "-",
                             "범위 (명목값)": " , ".join(nom_preview_list),
