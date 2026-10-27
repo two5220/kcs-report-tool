@@ -3,7 +3,7 @@
 프로젝트명: KCS 딸깍 기록지
 제작자: D
 슬로건: 당신의 손목은 소중하니깐..
-버전: v6.3.9 (다채널/다단 기기 제조사 및 기기번호 최초 1회만 출력되도록 공란 처리 적용)
+버전: v7.0.0 (F시험기 초고속 메모리 캐싱 리팩토링 및 처리 속도 최적화)
 """
 
 import io
@@ -965,7 +965,7 @@ elif should_run:
                                 )
 
                     # ========================================================
-                    # [기기 판별 B] 힘 시험기 
+                    # [기기 판별 B] 힘 시험기 (v7.0.0 O(1) 초고속 메모리 캐싱 리팩토링)
                     # ========================================================
                     elif fname.startswith("F") or any(
                         k in raw_device_name for k in ["시험기", "인장", "압축", "만능"]
@@ -1064,15 +1064,16 @@ elif should_run:
                         stages = []
                         for sname in result_sheets:
                             ws = wb_src[sname]
-                            rows = list(ws.iter_rows(values_only=True))
+                            # 💡 엑셀 셀과 값들을 메모리 캐싱 리스트로 한 번에 복제 (속도 저하 원인 100% 제거)
+                            grid = list(ws.iter_rows())
+                            cln_grid = [[str(c.value).replace(" ", "").replace("\n", "") if c.value is not None else "" for c in row] for row in grid]
+                            raw_grid = [[str(c.value) if c.value is not None else "" for c in row] for row in grid]
+
                             r = 0
-                            while r < len(rows):
-                                row_str = " ".join([str(c or "") for c in rows[r]])
-                                if any(
-                                    m in row_str
-                                    for m in ["압 축 교 정", "압축교정", "인 장 교 정", "인장교정"]
-                                ):
-                                    method = "인장" if ("인장" in row_str or "인 장" in row_str) else "압축"
+                            while r < len(grid):
+                                row_str = "".join(cln_grid[r])
+                                if "압축교정" in row_str or "인장교정" in row_str:
+                                    method = "압축" if "압축" in row_str else "인장"
                                     start_data_r = -1
                                     unit_str = "kN"
                                     
@@ -1080,55 +1081,43 @@ elif should_run:
                                     ind_col = 28
                                     is_dial_type = False
 
-                                    for dr in range(r + 1, min(r + 8, len(rows))):
-                                        dr_str = " ".join([str(c or "") for c in rows[dr]])
+                                    for dr in range(r + 1, min(r + 8, len(grid))):
+                                        dr_str = "".join(cln_grid[dr])
                                         if "지시하중" in dr_str or "기준하중" in dr_str or "다이얼" in dr_str:
                                             is_dial_type = "다이얼" in dr_str
                                             
                                             temp_nom = None
                                             temp_ind = None
 
-                                            for search_r in range(dr, min(dr + 3, len(rows))):
-                                                for c_idx, c_val in enumerate(rows[search_r]):
-                                                    if c_val is None:
-                                                        continue
-                                                    c_str = str(c_val).replace(" ", "").replace("\n", "")
+                                            for search_r in range(dr, min(dr + 3, len(grid))):
+                                                for c_idx, c_str in enumerate(cln_grid[search_r]):
+                                                    if not c_str: continue
                                                     
                                                     if temp_nom is None:
-                                                        if is_dial_type and "기준하중" in c_str:
-                                                            temp_nom = c_idx
-                                                        elif not is_dial_type and "지시하중" in c_str:
-                                                            temp_nom = c_idx
+                                                        if is_dial_type and "기준하중" in c_str: temp_nom = c_idx
+                                                        elif not is_dial_type and "지시하중" in c_str: temp_nom = c_idx
                                                             
                                                     if temp_ind is None:
                                                         if is_dial_type:
-                                                            if "다이얼평균" in c_str:
-                                                                temp_ind = c_idx
-                                                            elif "지시값" in c_str and temp_ind is None:
-                                                                temp_ind = c_idx
-                                                        elif not is_dial_type and "상대지시오차" in c_str:
-                                                            temp_ind = c_idx
+                                                            if "다이얼평균" in c_str: temp_ind = c_idx
+                                                            elif "지시값" in c_str and temp_ind is None: temp_ind = c_idx
+                                                        elif not is_dial_type and "상대지시오차" in c_str: temp_ind = c_idx
 
                                             if temp_nom is None:
-                                                for search_r in range(dr, min(dr + 3, len(rows))):
-                                                    for c_idx, c_val in enumerate(rows[search_r]):
-                                                        if c_val is None:
-                                                            continue
-                                                        c_str = str(c_val).replace(" ", "").replace("\n", "")
+                                                for search_r in range(dr, min(dr + 3, len(grid))):
+                                                    for c_idx, c_str in enumerate(cln_grid[search_r]):
                                                         if "기준하중" in c_str:
                                                             temp_nom = c_idx
                                                             break
-                                                    if temp_nom is not None:
-                                                        break
+                                                    if temp_nom is not None: break
                                             
                                             if temp_nom is not None: nom_col = temp_nom
                                             if temp_ind is not None: ind_col = temp_ind
                                                 
-                                            if dr + 1 < len(rows):
-                                                u_str = " ".join([str(c or "") for c in rows[dr + 1]])
+                                            if dr + 1 < len(grid):
+                                                u_str = " ".join(raw_grid[dr + 1])
                                                 m_u = re.search(r"\(([A-Za-z]+)\)", u_str)
-                                                if m_u:
-                                                    unit_str = m_u.group(1)
+                                                if m_u: unit_str = m_u.group(1)
                                                     
                                             start_data_r = dr + 2
                                             break
@@ -1137,46 +1126,46 @@ elif should_run:
                                         pts = []
                                         curr_r = start_data_r
                                         res_val_str = ""
-                                        while curr_r < len(rows):
-                                            crow = rows[curr_r]
-                                            crow_str = " ".join([str(c or "") for c in crow])
+                                        while curr_r < len(grid):
+                                            crow_cln = "".join(cln_grid[curr_r])
                                             
                                             if any(
-                                                k in crow_str
+                                                k in crow_cln
                                                 for k in [
-                                                    "상대영점", "분해능", "상대측정불확도", "압 축 교 정",
-                                                    "인 장 교 정", "KCS-QP", "신뢰수준", "눈금수",
-                                                    "다이얼 게이지", "추정하였음", "끝."
+                                                    "상대영점", "분해능", "상대측정불확도", "압축교정",
+                                                    "인장교정", "KCS-QP", "신뢰수준", "눈금수",
+                                                    "다이얼게이지", "추정하였음", "끝."
                                                 ]
                                             ):
                                                 break
                                                 
-                                            nom = crow[nom_col] if len(crow) > nom_col else None
-                                            err = crow[ind_col] if len(crow) > ind_col else None
+                                            nom = raw_grid[curr_r][nom_col] if nom_col < len(raw_grid[curr_r]) else ""
+                                            err = raw_grid[curr_r][ind_col] if ind_col < len(raw_grid[curr_r]) else ""
                                             
-                                            if isinstance(nom, str) and re.match(r"^\d+\.$", str(nom).strip()):
+                                            if re.match(r"^\d+\.$", nom.strip()):
                                                 break
                                             
-                                            if nom is not None and str(nom).strip() != "":
+                                            if nom.strip() != "":
                                                 try:
-                                                    f_nom = float(str(nom).replace(",", "").strip())
-                                                    if f_nom > 0:
+                                                    f_nom = float(nom.replace(",", "").strip())
+                                                    if f_nom > 0: # 0(영점) 생략
                                                         err_str = "-"
                                                         
-                                                        nom_cell = ws.cell(row=curr_r + 1, column=nom_col + 1)
+                                                        # O(1) 메모리 접근을 통한 서식 추출 
+                                                        nom_cell = grid[curr_r][nom_col]
                                                         nom_str_formatted = get_formatted_value(nom_cell)
                                                         if nom_str_formatted is None:
                                                             nom_str_formatted = str(f_nom)
                                                             
-                                                        if err is not None and str(err).strip() != "-":
+                                                        if err.strip() != "-" and err.strip() != "":
                                                             if is_dial_type:
-                                                                ind_cell = ws.cell(row=curr_r + 1, column=ind_col + 1)
+                                                                ind_cell = grid[curr_r][ind_col]
                                                                 err_str = get_formatted_value(ind_cell)
                                                                 if err_str is None:
-                                                                    f_err = float(str(err).replace(",", "").strip())
+                                                                    f_err = float(err.replace(",", "").strip())
                                                                     err_str = format_meaningful_decimals(f_err)
                                                             else:
-                                                                f_err = float(str(err).replace(",", "").strip())
+                                                                f_err = float(err.replace(",", "").strip())
                                                                 err_str = f"{f_err:+.2f} %"
                                                                 
                                                         pts.append(
@@ -1186,8 +1175,8 @@ elif should_run:
                                                     pass
                                             curr_r += 1
 
-                                        for sr in range(curr_r, min(curr_r + 6, len(rows))):
-                                            sr_str = " ".join([str(c or "") for c in rows[sr]])
+                                        for sr in range(curr_r, min(curr_r + 6, len(grid))):
+                                            sr_str = " ".join(raw_grid[sr])
                                             m_res = re.search(
                                                 r"분해능\s*:\s*([\d\.]+\s*[A-Za-z]*)" , sr_str
                                             )
@@ -2127,7 +2116,6 @@ elif should_run:
                     cell_dev = ws_curr.cell(row=start_row, column=2, value=dev_name_to_write)
                     cell_dev.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-                    # [수정] 서브채널(2번째 채널)부터 제조사와 기기번호를 공란 처리
                     if inst.get("is_sub_channel"):
                         maker_to_write = ""
                         model_to_write = ""
